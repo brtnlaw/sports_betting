@@ -1,4 +1,4 @@
-CREATE TABLE IF NOT EXISTS basketball.public_id (
+CREATE TABLE IF NOT EXISTS basketball.player_id (
     player VARCHAR(255) NOT NULL,
     team VARCHAR(255) NOT NULL,
     unique_id VARCHAR(32) PRIMARY KEY,

@@ -61,13 +61,13 @@ def get_player_id_table(year: int) -> pd.DataFrame:
 
 def insert_player_id_table(year: int) -> None:
     '''
-    Commits player_id_table to the basketball.public_id table. Run this to synthesize a year of player data.
+    Commits player_id_table to the basketball.player_id table. Run this to synthesize a year of player data.
 
     Args: 
         year (int): Desired year to get player data for.
     '''
     query = '''
-        INSERT INTO basketball.public_id(player, team, unique_id)
+        INSERT INTO basketball.player_id(player, team, unique_id)
         VALUES %s
         ON CONFLICT DO NOTHING
     '''
