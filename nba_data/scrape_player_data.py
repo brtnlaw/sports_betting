@@ -3,6 +3,7 @@ import pandas as pd
 import psycopg2
 import re
 import sys
+from bball_utils import generate_unique_player_id
 from bs4 import BeautifulSoup
 from io import StringIO
 from psycopg2.extras import execute_values
@@ -26,11 +27,11 @@ def clean_player_table(player_table: pd.DataFrame) -> pd.DataFrame:
 
     # Remove random headers
     player_table = player_table[~(player_table['Player'] == 'Player')]
+    player_table = player_table.rename(columns={'Tm': 'Team'})
     return player_table
 
 
-
-def get_player_data_szn(year: int) -> pd.DataFrame:
+def get_player_id_table(year: int) -> pd.DataFrame:
     '''
     Gets data for all the players that played a given season.
 
@@ -42,46 +43,21 @@ def get_player_data_szn(year: int) -> pd.DataFrame:
     '''
     url = f'https://www.basketball-reference.com/leagues/NBA_%(year)s_totals.html' % {'year': str(int(year)-1)}
     html = urlopen(url)
-
     soup = BeautifulSoup(html, features='html.parser')
     tables = soup.find_all('table', {'id': re.compile('totals_stats')})
-    tables
+
+    # Convert the tables into a string and wrap it with StringIO
     html_string = "\n".join(str(table) for table in tables)
     html_io = StringIO(html_string)
 
     # Use read_html with the StringIO object; remove 'Reserves' and 'Team Totals' rows, fill in NaN
     player_table = pd.read_html(html_io, header=0)[0]
-    
     player_table = clean_player_table(player_table)
-    return player_table
 
-def generate_unique_id(row: pd.Series) -> str:
-    '''
-    Takes player and team and generates a unique hash.
+    # Formats into PostgreSQL format, adds Unique_ID
+    player_table['Unique_ID'] = player_table.apply(generate_unique_player_id, axis=1)
+    return player_table[['Player', 'Team', 'Unique_ID']]
 
-    Args:
-        row (pd.Series): Row of player data.
-
-    Returns:
-        str: Unique hash.
-    '''
-    combined_values = f'{row["Player"]}{row["Tm"]}'
-    hash_value = hashlib.md5(combined_values.encode()).hexdigest()
-    return hash_value
-
-def get_player_id_table(year: int) -> pd.DataFrame:
-    '''
-    Takes a year, generates player_id table to be piped into PostgreSQL.
-
-    Args:
-        year (int): Desired year to get player data for.
-
-    Returns:
-        pd.DataFrame: Cleaned player_id table.
-    '''
-    player_table = get_player_data_szn(year)
-    player_table['Unique_ID'] = player_table.apply(generate_unique_id, axis=1)
-    return player_table[['Player', 'Tm', 'Unique_ID']].rename(columns={'Tm': 'Team'})
 
 def insert_player_id_table(year: int) -> None:
     '''
@@ -116,12 +92,12 @@ def insert_player_id_table(year: int) -> None:
     with conn.cursor() as cursor:
         try:
             execute_values(cursor, query, row_tuples)
+            print('Successfully executed %(year)s player_id data' % {'year': year})
         except Exception as e:
             print(e)
 
     # Commit and close connection
     conn.commit()
-    print('Successfully committed %(year)s player_id data' % {'year': year})
     conn.close()
 
 

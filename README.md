@@ -10,4 +10,6 @@ history agains tthe spread and the book... maybe certain books are motoxic in on
 need data
 then backtest
 
+For this project, let's ensure at least 2020+
+
 Want to store this in some PostgresSql DB
