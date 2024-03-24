@@ -57,7 +57,7 @@ def get_player_data_szn(year: int) -> pd.DataFrame:
 
 def generate_unique_id(row: pd.Series) -> str:
     '''
-    Takes player, position, team, and generates a unique hash.
+    Takes player and team and generates a unique hash.
 
     Args:
         row (pd.Series): Row of player data.
@@ -65,7 +65,7 @@ def generate_unique_id(row: pd.Series) -> str:
     Returns:
         str: Unique hash.
     '''
-    combined_values = f'{row["Player"]}{row["Pos"]}{row["Tm"]}'
+    combined_values = f'{row["Player"]}{row["Tm"]}'
     hash_value = hashlib.md5(combined_values.encode()).hexdigest()
     return hash_value
 
@@ -81,7 +81,7 @@ def get_player_id_table(year: int) -> pd.DataFrame:
     '''
     player_table = get_player_data_szn(year)
     player_table['Unique_ID'] = player_table.apply(generate_unique_id, axis=1)
-    return player_table[['Player', 'Pos', 'Tm', 'Unique_ID']].rename(columns={'Pos': 'Position', 'Tm': 'Team'})
+    return player_table[['Player', 'Tm', 'Unique_ID']].rename(columns={'Tm': 'Team'})
 
 def insert_player_id_table(year: int) -> None:
     '''
@@ -91,7 +91,7 @@ def insert_player_id_table(year: int) -> None:
         year (int): Desired year to get player data for.
     '''
     query = '''
-        INSERT INTO basketball.public_id(player, position, team, unique_id)
+        INSERT INTO basketball.public_id(player, team, unique_id)
         VALUES %s
         ON CONFLICT DO NOTHING
     '''
