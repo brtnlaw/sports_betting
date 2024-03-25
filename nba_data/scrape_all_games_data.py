@@ -127,7 +127,7 @@ def insert_all_games_table(month: str, year: int) -> None:
             port='5432'
         )
     except:
-        print("Failure to connect to database.")
+        print('Failure to connect to database.')
         
     all_games_table = get_all_games_table(month, year)
     if all_games_table is None:

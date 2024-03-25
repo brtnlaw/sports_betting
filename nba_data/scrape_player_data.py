@@ -82,7 +82,7 @@ def insert_player_id_table(year: int) -> None:
             port='5432'
         )
     except:
-        print("Failure to connect to database.")
+        print('Failure to connect to database.')
         
     player_table = get_player_id_table(year)
     

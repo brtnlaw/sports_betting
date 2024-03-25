@@ -4,8 +4,8 @@ import pandas as pd
 TEAM_CODE_DICT = {
     'Atlanta Hawks': 'ATL',
     'Boston Celtics': 'BOS',
-    'Brooklyn Nets': 'BKN',
-    'Charlotte Hornets': 'CHA',
+    'Brooklyn Nets': 'BRK',
+    'Charlotte Hornets': 'CHO',
     'Chicago Bulls': 'CHI',
     'Cleveland Cavaliers': 'CLE',
     'Dallas Mavericks': 'DAL',
