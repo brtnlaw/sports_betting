@@ -1,8 +1,8 @@
-import hashlib
 import pandas as pd
 import psycopg2
 import re
 import sys
+import time
 from bball_utils import generate_unique_player_id
 from bs4 import BeautifulSoup
 from io import StringIO
@@ -43,6 +43,10 @@ def get_player_id_table(year: int) -> pd.DataFrame:
     '''
     url = f'https://www.basketball-reference.com/leagues/NBA_%(year)s_totals.html' % {'year': str(int(year)-1)}
     html = urlopen(url)
+
+    # Kicks you out if you request over 20 times over a minute
+    time.sleep(3.5)
+
     soup = BeautifulSoup(html, features='html.parser')
     tables = soup.find_all('table', {'id': re.compile('totals_stats')})
 

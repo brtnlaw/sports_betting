@@ -4,6 +4,7 @@ import psycopg2
 import pytz
 import re
 import sys
+import time
 import warnings
 from bball_utils import TEAM_CODE_DICT, generate_unique_game_id
 from bs4 import BeautifulSoup
@@ -90,6 +91,10 @@ def get_all_games_table(month: str, year: int) -> List[str]:
         print(e)
         print('Failure: %(month)s, %(year)s all_games URL not pulled' % {'month': month.capitalize(), 'year': year})
         return None
+    
+    # Kicks you out if you request over 20 times over a minute
+    time.sleep(3.5)
+
     soup = BeautifulSoup(html, features='html.parser')
 
     # Convert the tables into a string and wrap it with StringIO

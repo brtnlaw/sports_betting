@@ -13,3 +13,19 @@ then backtest
 For this project, let's ensure at least 2020+
 
 Want to store this in some PostgresSql DB
+
+
+
+HERES THE IDEA
+
+
+resample games from player 
+blackbox resampling based on various factors (ML MOdel?)
+Multivariate KDE to get a PDF
+
+ideally i also have a health target of how much data i have...
+
+Successfully executed 2020-12-26, POR game stat_sheet data
+2020-12-26 SAC
+insert or update on table "stat_sheet" violates foreign key constraint "stat_sheet_game_id_fkey"
+DETAIL:  Key (game_id)=(c88b451e4d003776150a7fe278209933) is not present in table "all_games".

@@ -25,7 +25,7 @@ TEAM_CODE_DICT = {
     'Oklahoma City Thunder': 'OKC',
     'Orlando Magic': 'ORL',
     'Philadelphia 76ers': 'PHI',
-    'Phoenix Suns': 'PHX',
+    'Phoenix Suns': 'PHO',
     'Portland Trail Blazers': 'POR',
     'Sacramento Kings': 'SAC',
     'San Antonio Spurs': 'SAS',

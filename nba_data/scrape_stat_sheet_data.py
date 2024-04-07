@@ -1,22 +1,19 @@
-from urllib.request import urlopen
+from urllib.request import Request, urlopen
 from bs4 import BeautifulSoup
 import pandas as pd
 import re
-from typing import List
 from io import StringIO
-import datetime as dt
 import datetime as dt
 import pandas as pd
 import psycopg2
-import pytz
+import random
 import re
 import sys
-import warnings
+import time
 from bball_utils import TEAM_CODE_DICT, generate_unique_game_id, generate_unique_player_id
 from bs4 import BeautifulSoup
 from io import StringIO
 from psycopg2.extras import execute_values
-from psycopg2.extensions import AsIs
 from typing import List
 from urllib.request import urlopen
 import psycopg2
@@ -71,7 +68,9 @@ def get_games_between(start: dt.date, end: dt.date) -> pd.DataFrame:
     except:
         print("Failure to connect to database.")
 
-    query = 'SELECT * FROM basketball.all_games ag WHERE ag.date < %(end)s and ag.date > %(start)s'
+    query = '''
+            SELECT * FROM basketball.all_games ag WHERE ag.date < %(end)s and ag.date > %(start)s
+            '''
     all_game_data = pd.read_sql_query(query, conn, params={'start': start, 'end': end})
 
     # Close the connection
@@ -92,7 +91,7 @@ def clean_stat_sheet_table(stat_sheet_table: pd.DataFrame) -> pd.DataFrame:
     stat_sheet_table = stat_sheet_table[~stat_sheet_table['Starters'].isin(['Reserves', 'Team Totals'])]
     
     # Ignore stats of DNP players
-    stat_sheet_table = stat_sheet_table[stat_sheet_table['MP'] != 'Did Not Play']
+    stat_sheet_table = stat_sheet_table[(stat_sheet_table['MP'] != 'Did Not Play') & (stat_sheet_table['MP'] != 'Did Not Dress')]
 
     # Create a timedelta object representing the duration
     # Function to convert time string to timedelta
@@ -122,8 +121,11 @@ def get_stat_sheet_table(date: dt.date, site: str) -> pd.DataFrame:
         html = urlopen(url)
     except Exception as e:
         print(e)
-    soup = BeautifulSoup(html, features='html.parser')
 
+    # Kicks you out if you request over 20 times over a minute
+    time.sleep(3.5)
+
+    soup = BeautifulSoup(html, features='html.parser')
     tables = soup.find_all('table', {'id': re.compile('box-.*-game-basic')})
 
     # Extract three-letter codes from table IDs
@@ -190,6 +192,7 @@ def insert_stat_sheet_table(date: dt.date, site: str) -> None:
             execute_values(cursor, query, row_tuples)
             print('Successfully executed %(date)s, %(site)s game stat_sheet data' % {'date': date.strftime('%Y-%m-%d'), 'site': site})
         except Exception as e:
+            print(date, site)
             print(e)
 
     # Commit and close connection
