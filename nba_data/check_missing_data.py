@@ -1,21 +1,8 @@
-from urllib.request import urlopen
-from bs4 import BeautifulSoup
 import pandas as pd
-from io import StringIO
 import datetime as dt
 import pandas as pd
 import psycopg2
 import warnings
-from bball_utils import (
-    TEAM_CODE_DICT,
-    generate_unique_game_id,
-    generate_unique_player_id,
-)
-from bs4 import BeautifulSoup
-from io import StringIO
-from psycopg2.extras import execute_values
-from psycopg2.extensions import AsIs
-from urllib.request import urlopen
 from scrape_player_data import get_player_id_table
 from scrape_all_games_data import get_all_games_table
 from scrape_stat_sheet_data import get_games_between
