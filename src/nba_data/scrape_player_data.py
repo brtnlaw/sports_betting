@@ -3,11 +3,13 @@ import psycopg2
 import re
 import sys
 import time
-from bball_utils import generate_unique_player_id
+from bball_utils import generate_unique_player_id, load_config
 from bs4 import BeautifulSoup
 from io import StringIO
 from psycopg2.extras import execute_values
 from urllib.request import urlopen
+
+config = load_config()
 
 
 def clean_player_table(player_table: pd.DataFrame) -> pd.DataFrame:
@@ -85,14 +87,14 @@ def insert_player_id_table(year: int) -> None:
         ON CONFLICT DO NOTHING
     """
 
-    # Connect to postgres db
+    db_config = config["database"]
     try:
         conn = psycopg2.connect(
-            dbname="sports_data",
-            user="postgres",
-            password="postgres",
-            host="localhost",
-            port="5432",
+            dbname=db_config["dbname"],
+            user=db_config["user"],
+            password=db_config["password"],
+            host=db_config["host"],
+            port=db_config["port"],
         )
     except:
         print("Failure to connect to database.")

@@ -1,7 +1,9 @@
 import hashlib
 import pandas as pd
-from typing import List
 import datetime as dt
+import yaml
+from typing import List
+
 
 TEAM_CODE_DICT = {
     "Atlanta Hawks": "ATL",
@@ -106,5 +108,19 @@ def group_contiguous_dates(dates: List[str]) -> List[str]:
             formatted_groups.append(
                 f"{group[0].strftime('%m/%d/%y')}-{group[-1].strftime('%m/%d/%y')}"
             )
-
     return formatted_groups
+
+
+def load_config(config_path: str = "config/config.yaml") -> dict[str]:
+    """
+    Loads config file.
+
+    Args:
+        config_path: Path of the config
+
+    Returns:
+        dict[str]: Config from the file
+    """
+    with open(config_path, "r") as file:
+        config = yaml.safe_load(file)
+    return config

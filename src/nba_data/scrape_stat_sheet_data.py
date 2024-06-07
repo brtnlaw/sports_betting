@@ -9,16 +9,15 @@ import psycopg2
 import re
 import sys
 import time
-from bball_utils import (
-    generate_unique_game_id,
-    generate_unique_player_id,
-)
+from bball_utils import generate_unique_game_id, generate_unique_player_id, load_config
 from bs4 import BeautifulSoup
 from io import StringIO
 from psycopg2.extras import execute_values
 from urllib.request import urlopen
 import psycopg2
 import warnings
+
+config = load_config
 
 
 def get_all_games() -> pd.DataFrame:
@@ -29,13 +28,14 @@ def get_all_games() -> pd.DataFrame:
         pd.DataFrame: All of the NBA games.
     """
     # Connect to postgres db
+    db_config = config["database"]
     try:
         conn = psycopg2.connect(
-            dbname="sports_data",
-            user="postgres",
-            password="postgres",
-            host="localhost",
-            port="5432",
+            dbname=db_config["dbname"],
+            user=db_config["user"],
+            password=db_config["password"],
+            host=db_config["host"],
+            port=db_config["port"],
         )
     except:
         print("Failure to connect to database.")
@@ -61,13 +61,14 @@ def get_games_between(start: dt.date, end: dt.date) -> pd.DataFrame:
         pd.DataFrame: All of the NBA games.
     """
     # Connect to postgres db
+    db_config = config["database"]
     try:
         conn = psycopg2.connect(
-            dbname="sports_data",
-            user="postgres",
-            password="postgres",
-            host="localhost",
-            port="5432",
+            dbname=db_config["dbname"],
+            user=db_config["user"],
+            password=db_config["password"],
+            host=db_config["host"],
+            port=db_config["port"],
         )
     except:
         print("Failure to connect to database.")
@@ -199,14 +200,14 @@ def insert_stat_sheet_table(date: dt.date, site: str) -> None:
         ON CONFLICT DO NOTHING
     """
 
-    # Connect to postgres db
+    db_config = config["database"]
     try:
         conn = psycopg2.connect(
-            dbname="sports_data",
-            user="postgres",
-            password="postgres",
-            host="localhost",
-            port="5432",
+            dbname=db_config["dbname"],
+            user=db_config["user"],
+            password=db_config["password"],
+            host=db_config["host"],
+            port=db_config["port"],
         )
     except:
         print("Failure to connect to database.")

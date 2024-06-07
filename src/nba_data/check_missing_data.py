@@ -6,9 +6,12 @@ import warnings
 from scrape_player_data import get_player_id_table
 from scrape_all_games_data import get_all_games_table
 from scrape_stat_sheet_data import get_games_between
+from bball_utils import load_config
 import contextlib
 from bball_utils import group_contiguous_dates
 import os
+
+config = load_config()
 
 
 def get_missing_player_data(start: int, end: int) -> None:
@@ -19,13 +22,15 @@ def get_missing_player_data(start: int, end: int) -> None:
         start (int): The starting year of the query.
         end (int): The ending year of the query, inclusive.
     """
+
+    db_config = config["database"]
     try:
         conn = psycopg2.connect(
-            dbname="sports_data",
-            user="postgres",
-            password="postgres",
-            host="localhost",
-            port="5432",
+            dbname=db_config["dbname"],
+            user=db_config["user"],
+            password=db_config["password"],
+            host=db_config["host"],
+            port=db_config["port"],
         )
     except:
         print("Failure to connect to database.")
@@ -75,13 +80,14 @@ def get_missing_game_data(start: int, end: int) -> None:
         start (int): The starting year of the query.
         end (int): The ending year of the query, inclusive.
     """
+    db_config = config["database"]
     try:
         conn = psycopg2.connect(
-            dbname="sports_data",
-            user="postgres",
-            password="postgres",
-            host="localhost",
-            port="5432",
+            dbname=db_config["dbname"],
+            user=db_config["user"],
+            password=db_config["password"],
+            host=db_config["host"],
+            port=db_config["port"],
         )
     except:
         print("Failure to connect to database.")
@@ -146,14 +152,14 @@ def get_missing_statsheet_data(start: int, end: int) -> None:
         start (int): The starting year of the query.
         end (int): The ending year of the query, inclusive.
     """
-
+    db_config = config["database"]
     try:
         conn = psycopg2.connect(
-            dbname="sports_data",
-            user="postgres",
-            password="postgres",
-            host="localhost",
-            port="5432",
+            dbname=db_config["dbname"],
+            user=db_config["user"],
+            password=db_config["password"],
+            host=db_config["host"],
+            port=db_config["port"],
         )
     except:
         print("Failure to connect to database.")
