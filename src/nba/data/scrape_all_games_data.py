@@ -6,7 +6,7 @@ import re
 import sys
 import time
 import warnings
-from utils.bball_utils import TEAM_CODE_DICT, generate_unique_game_id
+from nba.utils import TEAM_CODE_DICT, generate_unique_game_id
 from bs4 import BeautifulSoup
 from io import StringIO
 from psycopg2.extras import execute_values

@@ -3,7 +3,7 @@ import psycopg2
 import re
 import sys
 import time
-from utils.bball_utils import generate_unique_player_id, load_config
+from nba.utils import generate_unique_player_id, load_config
 from bs4 import BeautifulSoup
 from io import StringIO
 from psycopg2.extras import execute_values

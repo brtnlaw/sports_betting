@@ -5,7 +5,7 @@ import warnings
 from scrape_player_data import get_player_id_table
 from scrape_all_games_data import get_all_games_table
 from scrape_stat_sheet_data import get_games_between
-from utils.bball_utils import load_config, group_contiguous_dates, retrieve_data
+from nba.utils import load_config, group_contiguous_dates, retrieve_data
 import contextlib
 import os
 
