@@ -1,14 +1,12 @@
 import pandas as pd
 import datetime as dt
 import pandas as pd
-import psycopg2
 import warnings
 from scrape_player_data import get_player_id_table
 from scrape_all_games_data import get_all_games_table
 from scrape_stat_sheet_data import get_games_between
-from bball_utils import load_config
+from utils.bball_utils import load_config, group_contiguous_dates, retrieve_data
 import contextlib
-from bball_utils import group_contiguous_dates
 import os
 
 config = load_config()
@@ -22,25 +20,8 @@ def get_missing_player_data(start: int, end: int) -> None:
         start (int): The starting year of the query.
         end (int): The ending year of the query, inclusive.
     """
-
-    db_config = config["database"]
-    try:
-        conn = psycopg2.connect(
-            dbname=db_config["dbname"],
-            user=db_config["user"],
-            password=db_config["password"],
-            host=db_config["host"],
-            port=db_config["port"],
-        )
-    except:
-        print("Failure to connect to database.")
-
     query = "SELECT * FROM basketball.player_id"
-    with warnings.catch_warnings(action="ignore"):
-        data = pd.read_sql_query(query, conn)
-
-    # Close the cursor and connection
-    conn.close()
+    data = retrieve_data(query)
 
     missing_df_list = []
     for year in range(start, end + 1):
@@ -80,23 +61,8 @@ def get_missing_game_data(start: int, end: int) -> None:
         start (int): The starting year of the query.
         end (int): The ending year of the query, inclusive.
     """
-    db_config = config["database"]
-    try:
-        conn = psycopg2.connect(
-            dbname=db_config["dbname"],
-            user=db_config["user"],
-            password=db_config["password"],
-            host=db_config["host"],
-            port=db_config["port"],
-        )
-    except:
-        print("Failure to connect to database.")
-
     query = "SELECT * FROM basketball.all_games"
-    with warnings.catch_warnings(action="ignore"):
-        data = pd.read_sql_query(query, conn)
-
-    conn.close()
+    data = retrieve_data(query)
 
     missing_df_list = []
     months = [
@@ -152,23 +118,8 @@ def get_missing_statsheet_data(start: int, end: int) -> None:
         start (int): The starting year of the query.
         end (int): The ending year of the query, inclusive.
     """
-    db_config = config["database"]
-    try:
-        conn = psycopg2.connect(
-            dbname=db_config["dbname"],
-            user=db_config["user"],
-            password=db_config["password"],
-            host=db_config["host"],
-            port=db_config["port"],
-        )
-    except:
-        print("Failure to connect to database.")
-
     query = "SELECT * FROM basketball.stat_sheet"
-    with warnings.catch_warnings(action="ignore"):
-        data = pd.read_sql_query(query, conn)
-
-    conn.close()
+    data = retrieve_data(query)
 
     with warnings.catch_warnings(action="ignore"), open(
         os.devnull, "w"

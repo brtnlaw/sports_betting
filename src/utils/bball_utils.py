@@ -1,9 +1,10 @@
 import hashlib
 import pandas as pd
 import datetime as dt
+import psycopg2
+import warnings
 import yaml
-from typing import List
-
+from typing import List, Optional
 
 TEAM_CODE_DICT = {
     "Atlanta Hawks": "ATL",
@@ -111,7 +112,7 @@ def group_contiguous_dates(dates: List[str]) -> List[str]:
     return formatted_groups
 
 
-def load_config(config_path: str = "config/config.yaml") -> dict[str]:
+def load_config(config_path: str = "../../config/config.yaml") -> dict[str]:
     """
     Loads config file.
 
@@ -124,3 +125,41 @@ def load_config(config_path: str = "config/config.yaml") -> dict[str]:
     with open(config_path, "r") as file:
         config = yaml.safe_load(file)
     return config
+
+
+def retrieve_data(query: str, params: Optional[dict] = None) -> Optional[pd.DataFrame]:
+    """
+    Wrapper for pulling from the database given a query
+
+    Args:
+        query (str): Query for the database
+        params (dict): Params for query
+
+    Returns:
+        Optional[pd.DataFrame]: Data if available from database.
+    """
+    config = load_config()
+    db_config = config["database"]
+    try:
+        conn = psycopg2.connect(
+            dbname=db_config["dbname"],
+            user=db_config["user"],
+            password=db_config["password"],
+            host=db_config["host"],
+            port=db_config["port"],
+        )
+    except psycopg2.OperationalError as e:
+        print("Failure to connect to database:", e)
+        return None
+
+    data = None
+    try:
+        with warnings.catch_warnings(action="ignore"):
+            data = pd.read_sql_query(query, conn, params)
+    except psycopg2.Error as e:
+        print("Error executing query:", e)
+
+    # Close the cursor and connection
+    conn.close()
+
+    return data

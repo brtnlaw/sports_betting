@@ -9,7 +9,12 @@ import psycopg2
 import re
 import sys
 import time
-from bball_utils import generate_unique_game_id, generate_unique_player_id, load_config
+from utils.bball_utils import (
+    generate_unique_game_id,
+    generate_unique_player_id,
+    load_config,
+    retrieve_data,
+)
 from bs4 import BeautifulSoup
 from io import StringIO
 from psycopg2.extras import execute_values
@@ -27,26 +32,8 @@ def get_all_games() -> pd.DataFrame:
     Returns:
         pd.DataFrame: All of the NBA games.
     """
-    # Connect to postgres db
-    db_config = config["database"]
-    try:
-        conn = psycopg2.connect(
-            dbname=db_config["dbname"],
-            user=db_config["user"],
-            password=db_config["password"],
-            host=db_config["host"],
-            port=db_config["port"],
-        )
-    except:
-        print("Failure to connect to database.")
-
     query = "SELECT * FROM basketball.all_games"
-    with warnings.catch_warnings(action="ignore"):
-        all_game_data = pd.read_sql_query(query, conn)
-
-    # Close the connection
-    conn.close()
-    return all_game_data
+    return retrieve_data(query)
 
 
 def get_games_between(start: dt.date, end: dt.date) -> pd.DataFrame:
@@ -60,30 +47,11 @@ def get_games_between(start: dt.date, end: dt.date) -> pd.DataFrame:
     Returns:
         pd.DataFrame: All of the NBA games.
     """
-    # Connect to postgres db
-    db_config = config["database"]
-    try:
-        conn = psycopg2.connect(
-            dbname=db_config["dbname"],
-            user=db_config["user"],
-            password=db_config["password"],
-            host=db_config["host"],
-            port=db_config["port"],
-        )
-    except:
-        print("Failure to connect to database.")
-
     query = """
             SELECT * FROM basketball.all_games ag WHERE ag.date < %(end)s and ag.date > %(start)s
             """
-    with warnings.catch_warnings(action="ignore"):
-        all_game_data = pd.read_sql_query(
-            query, conn, params={"start": start, "end": end}
-        )
-
-    # Close the connection
-    conn.close()
-    return all_game_data
+    params = {"start": start, "end": end}
+    return retrieve_data(query, params)
 
 
 def clean_stat_sheet_table(stat_sheet_table: pd.DataFrame) -> pd.DataFrame:
