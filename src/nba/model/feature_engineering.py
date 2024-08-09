@@ -1,4 +1,5 @@
 import pandas as pd
+from sklearn.neighbors import KernelDensity
 from sklearn.preprocessing import MinMaxScaler
 
 
@@ -32,6 +33,13 @@ def generate_features(data: pd.DataFrame, input_data: pd.Series) -> pd.DataFrame
     return data
 
 
-def loss():
+def loss(
+    kde: KernelDensity,
+):
     # TODO: some form of -log(p;y), for a given observation
     pass
+
+
+# def gradient(
+#         kde: KernelDensity,
+# ) -> pd.DataFrame:
