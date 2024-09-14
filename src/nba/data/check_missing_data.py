@@ -149,7 +149,7 @@ def get_missing_statsheet_data(start: int, end: int) -> None:
 
 
 if __name__ == "__main__":
-    # python nba_data/check_missing_data.py
+    # python data/check_missing_data.py
     get_missing_player_data(2020, 2024)
     get_missing_game_data(2020, 2024)
     get_missing_statsheet_data(2020, 2024)
