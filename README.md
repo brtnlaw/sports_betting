@@ -6,6 +6,7 @@ Download PostgreSQL
 Optional: Download DBeaver
 Make a config.yaml file
 Make a requirements.txt file
+Use the execute_sql_script function in the folder of whichever file is necessary
 
 TODO:
 Resize sql_queries for nba/nfl/cfb/cbb
