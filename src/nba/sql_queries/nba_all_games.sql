@@ -1,4 +1,4 @@
-CREATE TABLE IF NOT EXISTS basketball.all_games (
+CREATE TABLE IF NOT EXISTS nba.all_games (
     date DATE,
     start_time TIME,
     visitor VARCHAR(3),

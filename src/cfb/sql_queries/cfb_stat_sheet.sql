@@ -1,4 +1,4 @@
-CREATE TABLE IF NOT EXISTS basketball.stat_sheet (
+CREATE TABLE IF NOT EXISTS cfb.stat_sheet (
     player VARCHAR(255) NOT NULL,
     minutes_played INTERVAL,
     field_goals INT NOT NULL,
