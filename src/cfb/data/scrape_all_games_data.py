@@ -1,27 +1,29 @@
 import datetime as dt
 import pandas as pd
-import psycopg2
-import pytz
 import re
 import sys
-import time
-import warnings
 from bs4 import BeautifulSoup
 from io import StringIO
-from psycopg2.extras import execute_values
-from psycopg2.extensions import AsIs
-from typing import List
 from urllib.request import urlopen
 import sys
 sys.path.insert(0, '../..')
-from db_utils import generate_unique_game_id
+from db_utils import generate_unique_game_id, insert_data
 
-def is_valid_date(date_string):
+def is_valid_date(date_string: str) -> bool:
+    """
+    Checks for valid date_string.
+
+    Args:
+        date_string (str): Takes in date, checks if valid for CFB games
+
+    Returns:
+        bool: Returns whether or not the date string is legitimate
+    """
     # Regex pattern for "Month Day, Year" with an optional day of the week
     pattern = r'^(?:\w{3,9},\s)?\w{3,9}\s\d{1,2},\s\d{4}$'
     return bool(re.match(pattern, date_string))
 
-def get_rank_from_row(row):
+def get_rank_from_row(row: pd.Series):
     pattern2 = r"^(.*?)\s\((\d{1,2})\)$"
     university = row[0]
     match = re.fullmatch(pattern2, university)
@@ -30,16 +32,27 @@ def get_rank_from_row(row):
     else:
          return university, None
 
-def clean_df(df: pd.DataFrame, date: dt.datetime): 
+def clean_df(df: pd.DataFrame, date: dt.datetime) -> pd.DataFrame: 
+    """
+    Cleans the scraped dataframe of games.
+
+    Args:
+        df (pd.DataFrame): Web scraped dataframe
+        date (dt.datetime): Given date
+
+    Returns:
+        pd.DataFrame: Cleaned dataframe
+    """
     pattern = "^[A-Za-z]{3} \d{1,2}/\d{2}$"
     match_string = df.iloc[0][0]
     if re.fullmatch(pattern, match_string):
         match_string.to_strftime()
 
-    home_row = df.iloc[1]
+    # The last two rows will always be home, followed by visitor. At times, there will be a bowl header row
+    home_row = df.iloc[-2]
+    visitor_row = df.iloc[-1]
     home, home_rank = get_rank_from_row(home_row)
     home_points = home_row[1]
-    visitor_row = df.iloc[2]
     visitor, visitor_rank = get_rank_from_row(visitor_row)
     visitor_points = visitor_row[1]
     
@@ -60,11 +73,23 @@ def clean_df(df: pd.DataFrame, date: dt.datetime):
         'unique_id': [generate_unique_game_id(id_row)]
     })
 
-def get_daily_games_at_url(url: str):
+def get_daily_games_at_date(date: dt.date) -> pd.DataFrame:
+    """
+    Gets the entire cleaned slate of CFB games at a given date
+
+    Args:
+        date (dt.date): Date of interest
+
+    Returns:
+        pd.DataFrame: Cleaned dataframe
+    """
+    base_url = "https://www.sports-reference.com/cfb/boxscores/index.cgi"
+    url = f"{base_url}?month={date.month}&day={date.day}&year={date.year}"
     html = urlopen(url)
     soup = BeautifulSoup(html, features="html.parser")
     cand_divs = soup.find_all(attrs={"class": re.compile("game_summaries")})
     date_format = "%A, %B %d, %Y"
+    all_games_table = None
 
     for cand_div in cand_divs:
         h2_text = cand_div.find('h2').text
@@ -72,58 +97,41 @@ def get_daily_games_at_url(url: str):
             date = dt.datetime.strptime(h2_text, date_format)
             html_io = StringIO(str(cand_div))
             all_games_table = pd.read_html(html_io)
-            break
-    
+    if not all_games_table:
+        # If no new games that day, return None
+        return None
     game_list = []
     for game in all_games_table:
-        game_list.append(clean_df(game), date)
+        game_list.append(clean_df(game, date))
     return pd.concat(game_list)
+
     
-
-
-def get_all_games_table(month: str, year: int) -> List[str]:
+def insert_daily_games_at_date(date: dt.date) -> None:
     """
-    Retrieve URLs for NBA games for a specific season.
+    Given a date, scrapes all CFB games on that date at once. Logs the final score and any rankings. Creates log entries.
 
     Args:
-        month (str): Full name of month for which you want to query data.
-        year (int): The year which the season began.
-
-    Returns:
-        List[str]: A list of NBA games for the specified year.
+        date (dt.date): Date of interest.
     """
-    month = month.lower()
+    get_table_function = get_daily_games_at_date
+    params = {
+        'date': date
+    }
+    query = """
+        INSERT INTO cfb.all_games(date, home, home_points, visitor, visitor_points, home_rank, visitor_rank, unique_id)
+        VALUES %s
+        ON CONFLICT DO NOTHING
+    """
+    log_query = """
+        INSERT INTO cfb.all_games_log(unique_id, date)
+        VALUES %s
+        ON CONFLICT (unique_id, date) 
+        DO UPDATE SET
+            all_quarters_scrape = EXCLUDED.all_quarters_scrape
+    """
+    insert_data(get_table_function=get_table_function, params=params, query=query, log_query=log_query)
 
-    # URL to scrape, notice f string:
-    url = (
-        f"https://www.basketball-reference.com/leagues/NBA_%(year)s_games-%(month)s.html"
-        % {"year": year, "month": month}
-    )
-    try:
-        html = urlopen(url)
-    except Exception as e:
-        print(e)
-        print(
-            "Failure: %(month)s, %(year)s all_games URL not pulled"
-            % {"month": month.capitalize(), "year": year}
-        )
-        return None
-
-    # Kicks you out if you request over 20 times over a minute
-    time.sleep(3.5)
-
-    soup = BeautifulSoup(html, features="html.parser")
-
-    # Convert the tables into a string and wrap it with StringIO
-    tables = soup.find_all("table", {"id": re.compile("schedule")})
-    html_string = "\n".join(str(table) for table in tables)
-    html_io = StringIO(html_string)
-
-    all_games_table = pd.read_html(html_io, header=0)[0]
-    all_games_table = clean_all_games_table(all_games_table)
-    if all_games_table is not None:
-        all_games_table["Unique_ID"] = all_games_table.apply(
-            generate_unique_game_id, axis=1
-        )
-    return all_games_table
-
+def backfill_games(starting_date: dt.date=dt.date(2014, 1, 1)) -> None:
+    # Should automatically know the starting point, check each day and see if the number of games matches the number of games on the date, and start from there
+    starting_date = dt.date(2014, 1, 1)
+    pass

@@ -1,15 +1,32 @@
-Sports betting model to generate P+R+A for a given player
-To compare against historical betting odds and spot the best "opportunity" on a given day
+# Sports Betting Model
 
-Setup:
-Download PostgreSQL
-Optional: Download DBeaver
-Make a config.yaml file
-Make a requirements.txt file
-Use the execute_sql_script function in the folder of whichever file is necessary
+Looks for relative value within betting odds. Compares synthetic lines to get the lowest hold. Ideally, non-synthetic line is strong. Current focus on weaker market in CFB, although framework designed to be general.
 
-TODO:
-Resize sql_queries for nba/nfl/cfb/cbb
-Add historical lines for PRA
-Backtest with single unit sizes for top x trades on a given day
-Develop better visualization of PMF generated, perhaps in the form of a dashboard
+## Features
+
+- Visualization of lines, ordered by hold
+- Recommendation of specific lines to trade on
+- Ability to construct synthetic lines
+    - Synthetic lines built using a model
+- Various derivative predictions
+    - Individual player stats, quarter stats
+
+## Setup
+
+- Download PostgreSQL
+    - Optional: Download DBeaver
+- Run the sql files
+- Download the requirements.txt
+```
+pip install -r requirements.txt
+```
+- Set up a config.yaml file under src
+```
+database:
+  dbname: 
+  user: 
+  password: 
+  host:
+  port:
+```
+- Set up the anacron job

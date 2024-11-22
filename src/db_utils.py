@@ -6,8 +6,9 @@ import numpy as np
 import os
 import psycopg2
 import warnings
+import psycopg2.extras
 import yaml
-from typing import List, Optional
+from typing import Callable, List, Optional
 
 
 def load_config(config_path: str = "../../config/config.yaml") -> dict[str]:
@@ -15,7 +16,7 @@ def load_config(config_path: str = "../../config/config.yaml") -> dict[str]:
     Loads config file.
 
     Args:
-        config_path: Path of the config
+        config_path(str): Path of the config
 
     Returns:
         dict[str]: Config from the file
@@ -123,7 +124,7 @@ def group_contiguous_dates(dates: List[str]) -> List[str]:
 
 def retrieve_data(query: str, params: Optional[dict] = None) -> Optional[pd.DataFrame]:
     """
-    Wrapper for pulling from the database given a query
+    Wrapper for pulling from the database given a query.
 
     Args:
         query (str): Query for the database
@@ -151,3 +152,62 @@ def retrieve_data(query: str, params: Optional[dict] = None) -> Optional[pd.Data
     conn.close()
 
     return data
+
+def insert_data(
+        get_table_function: Callable, 
+        params: dict,
+        query: str,
+        log_query: Optional[str] = None,
+        log_cols: Optional[List] = None
+    ) -> None: 
+    """
+    Framework for inserting clean data into Postgres.
+
+    Args:
+        get_table_function (Callable): Function which generates the clean dataframe.
+        params (dict): Params that are input to the get_table_function, often date.
+        query (str): Query to insert into the database.
+        log_query (Optional[str], optional): Query to insert into the log database. Defaults to None.
+        log_cols (Optional[List], optional): Additional columns that would be ticked True within the log. Defaults to None.
+    """
+    config = load_config()
+    db_config = config["database"]
+    try:
+        conn = psycopg2.connect(**db_config)
+    except:
+        print("Failure to connect to database.")
+
+    all_data_table = get_table_function(**params)
+    if all_data_table is None:
+        conn.close()
+        pass
+    
+    # Split up each row value into tuples
+    row_tuples = [tuple(row) for row in all_data_table.values]
+
+    # Handle optional logging
+    if log_query:
+        all_log_table = all_data_table[["unique_id", "date"]]
+        if log_cols:
+            for log_col in log_cols:
+                # Data passes the audit, i.e. column we want to log is true
+                all_log_table[log_col] = True
+        log_row_tuples = [tuple(row) for row in all_log_table.values]
+
+    with conn.cursor() as cursor:
+        try:
+            psycopg2.extras.execute_values(cursor, query, row_tuples)
+            print(
+                "Successfully executed '%(name)s' with params %(params)s"
+                % {"name": get_table_function.__name__, "params": params}
+            )
+            # Logging and data input are hand in hand
+            psycopg2.extras.execute_values(cursor, log_query, log_row_tuples)
+            print(
+                "Successfully logged '%(name)s' with params %(params)s with log_cols %(log_cols)s"
+                % {"name": get_table_function.__name__, "params": params, "log_cols": log_cols}
+            )
+        except Exception as e:
+            print(e)
+    conn.commit()
+    conn.close()
