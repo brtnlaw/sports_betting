@@ -5,9 +5,10 @@ import sys
 from bs4 import BeautifulSoup
 from io import StringIO
 from urllib.request import urlopen
-import sys
+from typing import Optional
+import time
 sys.path.insert(0, '../..')
-from db_utils import generate_unique_game_id, insert_data
+from db_utils import generate_unique_game_id, insert_data, retrieve_data
 
 def is_valid_date(date_string: str) -> bool:
     """
@@ -23,10 +24,19 @@ def is_valid_date(date_string: str) -> bool:
     pattern = r'^(?:\w{3,9},\s)?\w{3,9}\s\d{1,2},\s\d{4}$'
     return bool(re.match(pattern, date_string))
 
-def get_rank_from_row(row: pd.Series):
-    pattern2 = r"^(.*?)\s\((\d{1,2})\)$"
+def get_rank_from_row(row: pd.Series) -> tuple[str, Optional[int]]:
+    """
+    Gets the program's rank from the row. 
+
+    Args:
+        row (pd.Series): Row given by df
+
+    Returns:
+        tuple[str, str]: University and rank, if applicable
+    """
+    pattern = r"^(.*?)\s\((\d{1,2})\)$"
     university = row[0]
-    match = re.fullmatch(pattern2, university)
+    match = re.fullmatch(pattern, university)
     if match:
          return match.group(1), int(match.group(2))
     else:
@@ -43,11 +53,6 @@ def clean_df(df: pd.DataFrame, date: dt.datetime) -> pd.DataFrame:
     Returns:
         pd.DataFrame: Cleaned dataframe
     """
-    pattern = "^[A-Za-z]{3} \d{1,2}/\d{2}$"
-    match_string = df.iloc[0][0]
-    if re.fullmatch(pattern, match_string):
-        match_string.to_strftime()
-
     # The last two rows will always be home, followed by visitor. At times, there will be a bowl header row
     home_row = df.iloc[-2]
     visitor_row = df.iloc[-1]
@@ -73,9 +78,9 @@ def clean_df(df: pd.DataFrame, date: dt.datetime) -> pd.DataFrame:
         'unique_id': [generate_unique_game_id(id_row)]
     })
 
-def get_daily_games_at_date(date: dt.date) -> pd.DataFrame:
+def get_daily_games_at_date(date: dt.date) -> Optional[pd.DataFrame]:
     """
-    Gets the entire cleaned slate of CFB games at a given date
+    Gets the entire cleaned slate of CFB games at a given date.
 
     Args:
         date (dt.date): Date of interest
@@ -93,6 +98,7 @@ def get_daily_games_at_date(date: dt.date) -> pd.DataFrame:
 
     for cand_div in cand_divs:
         h2_text = cand_div.find('h2').text
+        # checks all candidates for a valid date, then gets the table if so
         if is_valid_date(h2_text):
             date = dt.datetime.strptime(h2_text, date_format)
             html_io = StringIO(str(cand_div))
@@ -103,6 +109,9 @@ def get_daily_games_at_date(date: dt.date) -> pd.DataFrame:
     game_list = []
     for game in all_games_table:
         game_list.append(clean_df(game, date))
+
+    # Kicks you out if you request over 20 times over a minute
+    time.sleep(3.5)
     return pd.concat(game_list)
 
     
@@ -131,7 +140,65 @@ def insert_daily_games_at_date(date: dt.date) -> None:
     """
     insert_data(get_table_function=get_table_function, params=params, query=query, log_query=log_query)
 
-def backfill_games(starting_date: dt.date=dt.date(2014, 1, 1)) -> None:
-    # Should automatically know the starting point, check each day and see if the number of games matches the number of games on the date, and start from there
-    starting_date = dt.date(2014, 1, 1)
-    pass
+def backfill_games(date: dt.date=dt.date(2013, 12, 31), genned_dates: Optional[set]=None) -> None:
+    """
+    Backfills CFB games from starting point date.
+    Command: python src/cfb/data/scrape_all_games_data.py backfill_games
+
+    Args:
+        starting_date (dt.date, optional): Starting date. Defaults to dt.date(2013, 12, 31).
+    """
+    if not genned_dates:
+        # Given that games are done a full day at a time, should not be possible to have partial slates logged
+        date_query = """
+        SELECT DISTINCT date
+        FROM cfb.all_games
+        """
+        genned_dates = set(retrieve_data(date_query)["date"])
+
+    # Grabs the last non-genned date that is within the CFB season
+    while date in genned_dates or not (
+        (8, 15) <= (date.month, date.day) <= (12, 31) or
+        (1, 1) <= (date.month, date.day) <= (1, 15)
+    ):
+        if not (
+            (8, 15) <= (date.month, date.day) <= (12, 31) or
+            (1, 1) <= (date.month, date.day) <= (1, 15)
+        ):
+            date = dt.date(date.year, 8, 15)
+        else:
+            date += dt.timedelta(days=1)
+    
+    # If we reach current day, stop
+    if date > dt.date.today() - dt.timedelta(days=7):
+        print("Reached the current day.")
+        return
+
+    # Check page from starting_date
+    base_url = "https://www.sports-reference.com/cfb/boxscores/index.cgi"
+    url = f"{base_url}?month={date.month}&day={date.day}&year={date.year}"
+    html = urlopen(url)
+    soup = BeautifulSoup(html, features="html.parser")
+    soup_dates = soup.find_all("a", {"href": re.compile(r"^/cfb/boxscores/index")})
+
+    print(f"Backfilling games around {date}")
+
+    # Pulls all dates in the week through the top
+    dates_this_week = [date]
+    for soup_date in soup_dates:
+        if re.search(r'\d', soup_date.string):
+            dates_this_week.append(dt.datetime.strptime(soup_date.string, '%B %d, %Y').date())
+
+    for date_this_week in dates_this_week:
+        if date_this_week in genned_dates:
+            continue
+        else:
+            insert_daily_games_at_date(date_this_week)
+            time.sleep(3.5)
+
+    date += dt.timedelta(days=3)
+
+    # Kicks you out if you request over 20 times over a minute
+    time.sleep(3.5)
+    backfill_games(date, genned_dates)
+    return

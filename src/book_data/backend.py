@@ -65,7 +65,7 @@ def prop_df_from_dict(outcomes: list, stat: str = 'block'):
                 'hold': props.hold
             })
 
-    # Convert to DataFrame
+    # convert to DataFrame
     prop_df = pd.DataFrame(data)
     prop_df.set_index(['player_name', 'handicap'])
     return prop_df

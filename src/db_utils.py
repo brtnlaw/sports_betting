@@ -5,6 +5,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import os
 import psycopg2
+import sqlparse
 import warnings
 import psycopg2.extras
 import yaml
@@ -128,7 +129,7 @@ def retrieve_data(query: str, params: Optional[dict] = None) -> Optional[pd.Data
 
     Args:
         query (str): Query for the database
-        params (dict): Params for query
+        params Optional[dict]: Params for query
 
     Returns:
         Optional[pd.DataFrame]: Data if available from database.
@@ -153,6 +154,25 @@ def retrieve_data(query: str, params: Optional[dict] = None) -> Optional[pd.Data
 
     return data
 
+def get_insert_table(query: str):
+    """
+    Given a query, gets the table intended to be inserted into.
+
+    Args:
+        query (str): SQL query
+    """
+    parsed = sqlparse.parse(query)
+
+    # Extract table name from the first statement
+    for stmt in parsed:
+        # Find INSERT INTO statement and extract table name
+        if stmt.get_type() == 'INSERT':
+            for token in stmt.tokens:
+                if isinstance(token, sqlparse.sql.Identifier):
+                    table_name = token.get_real_name()  # This gets the table name without schema
+                    schema_name = token.get_parent_name()  # This gets the schema name
+                    return f"{schema_name}.{table_name}"
+                
 def insert_data(
         get_table_function: Callable, 
         params: dict,
@@ -161,7 +181,7 @@ def insert_data(
         log_cols: Optional[List] = None
     ) -> None: 
     """
-    Framework for inserting clean data into Postgres.
+    Framework for inserting clean data into Postgres. If no data and log_query is not None, then pastes a row with just the date.
 
     Args:
         get_table_function (Callable): Function which generates the clean dataframe.
@@ -170,6 +190,9 @@ def insert_data(
         log_query (Optional[str], optional): Query to insert into the log database. Defaults to None.
         log_cols (Optional[List], optional): Additional columns that would be ticked True within the log. Defaults to None.
     """
+    if not params["date"] and log_query:
+        raise Exception("Params require date for logging.")
+    
     config = load_config()
     db_config = config["database"]
     try:
@@ -178,10 +201,27 @@ def insert_data(
         print("Failure to connect to database.")
 
     all_data_table = get_table_function(**params)
+
+    # If empty, insert audit placeholder for that date
     if all_data_table is None:
+        if log_query:
+            log_table = get_insert_table(log_query)
+            empty_log_query = f"""
+                INSERT INTO {log_table}(date)
+                VALUES %s
+                ON CONFLICT DO NOTHING
+            """
+            # Commits a row to the log table with only the date, Null unique_id
+            with conn.cursor() as cursor:
+                try:
+                    psycopg2.extras.execute_values(cursor, empty_log_query, [(params["date"],)])    
+                    conn.commit()
+                    print("Successfully logged %(log_table)s with %(date)s - no data for this day"
+                        % {"log_table": log_table, "date": params["date"]})
+                except Exception as e:
+                    print (e)
         conn.close()
-        pass
-    
+        return
     # Split up each row value into tuples
     row_tuples = [tuple(row) for row in all_data_table.values]
 
@@ -203,10 +243,13 @@ def insert_data(
             )
             # Logging and data input are hand in hand
             psycopg2.extras.execute_values(cursor, log_query, log_row_tuples)
-            print(
-                "Successfully logged '%(name)s' with params %(params)s with log_cols %(log_cols)s"
-                % {"name": get_table_function.__name__, "params": params, "log_cols": log_cols}
-            )
+            if log_query:
+                print(
+                    "Successfully logged '%(name)s' with params %(params)s with log_cols %(log_cols)s"
+                    % {"name": get_table_function.__name__, "params": params, "log_cols": log_cols}
+                )
+            else:
+                print("No log query.")
         except Exception as e:
             print(e)
     conn.commit()
