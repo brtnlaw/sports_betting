@@ -79,13 +79,14 @@ def build_layout():
     return layout
  
 # TODO: make this pull the historical odds, saved in postgres
+# per the api, starter key can be updated once every 30 minutes
 @callback(
     [Output("prop_table", "data"),
     Output("last_updated", "children")],
     [Input("prop_date", "date"),
      Input("interval_component", "n_intervals")]
 )
-def update_table(date, n_intervals):
+def update_table(date):
     if date is None:
         return []
     df = backend.build_prop_df(pd.to_datetime(date).date())
@@ -95,5 +96,7 @@ def update_table(date, n_intervals):
 
 app.layout = build_layout()
 
+# To run:
+# python src/book_data/frontend.py
 if __name__ == '__main__':
     app.run(debug=True)

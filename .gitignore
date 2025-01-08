@@ -2,3 +2,5 @@
 *.pyo
 *.yaml
 *.env 
+src/*.egg-info
+venv/

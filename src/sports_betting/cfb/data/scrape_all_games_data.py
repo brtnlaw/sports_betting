@@ -1,13 +1,11 @@
 import datetime as dt
 import pandas as pd
 import re
-import sys
 from bs4 import BeautifulSoup
 from io import StringIO
 from urllib.request import urlopen
 from typing import Optional
 import time
-sys.path.insert(0, '../..')
 from db_utils import generate_unique_game_id, insert_data, retrieve_data
 
 def is_valid_date(date_string: str) -> bool:
@@ -140,7 +138,7 @@ def insert_daily_games_at_date(date: dt.date) -> None:
     """
     insert_data(get_table_function=get_table_function, params=params, query=query, log_query=log_query)
 
-def backfill_games(date: dt.date=dt.date(2013, 12, 31), genned_dates: Optional[set]=None) -> None:
+def backfill_games(date: dt.date = dt.date(2013, 12, 31), genned_dates: Optional[set] = None) -> None:
     """
     Backfills CFB games from starting point date.
     Command: python src/cfb/data/scrape_all_games_data.py backfill_games
@@ -152,53 +150,55 @@ def backfill_games(date: dt.date=dt.date(2013, 12, 31), genned_dates: Optional[s
         # Given that games are done a full day at a time, should not be possible to have partial slates logged
         date_query = """
         SELECT DISTINCT date
-        FROM cfb.all_games
+        FROM cfb.all_games_log
         """
         genned_dates = set(retrieve_data(date_query)["date"])
 
-    # Grabs the last non-genned date that is within the CFB season
-    while date in genned_dates or not (
-        (8, 15) <= (date.month, date.day) <= (12, 31) or
-        (1, 1) <= (date.month, date.day) <= (1, 15)
-    ):
-        if not (
+    while True:
+        # Adjust the date to skip already processed dates or those outside the CFB season
+        while date in genned_dates or not (
             (8, 15) <= (date.month, date.day) <= (12, 31) or
             (1, 1) <= (date.month, date.day) <= (1, 15)
         ):
-            date = dt.date(date.year, 8, 15)
-        else:
-            date += dt.timedelta(days=1)
-    
-    # If we reach current day, stop
-    if date > dt.date.today() - dt.timedelta(days=7):
-        print("Reached the current day.")
-        return
+            if not (
+                (8, 15) <= (date.month, date.day) <= (12, 31) or
+                (1, 1) <= (date.month, date.day) <= (1, 15)
+            ):
+                date = dt.date(date.year, 8, 15)
+            else:
+                date += dt.timedelta(days=1)
 
-    # Check page from starting_date
-    base_url = "https://www.sports-reference.com/cfb/boxscores/index.cgi"
-    url = f"{base_url}?month={date.month}&day={date.day}&year={date.year}"
-    html = urlopen(url)
-    soup = BeautifulSoup(html, features="html.parser")
-    soup_dates = soup.find_all("a", {"href": re.compile(r"^/cfb/boxscores/index")})
+        # If the date exceeds the allowed threshold, stop processing
+        if date > dt.date.today() - dt.timedelta(days=7):
+            print("Reached the current day.")
+            break
 
-    print(f"Backfilling games around {date}")
+        # Fetch and process games for the current date
+        base_url = "https://www.sports-reference.com/cfb/boxscores/index.cgi"
+        url = f"{base_url}?month={date.month}&day={date.day}&year={date.year}"
+        html = urlopen(url)
+        soup = BeautifulSoup(html, features="html.parser")
+        soup_dates = soup.find_all("a", {"href": re.compile(r"^/cfb/boxscores/index")})
 
-    # Pulls all dates in the week through the top
-    dates_this_week = [date]
-    for soup_date in soup_dates:
-        if re.search(r'\d', soup_date.string):
-            dates_this_week.append(dt.datetime.strptime(soup_date.string, '%B %d, %Y').date())
+        print(f"Backfilling games around {date}")
 
-    for date_this_week in dates_this_week:
-        if date_this_week in genned_dates:
-            continue
-        else:
-            insert_daily_games_at_date(date_this_week)
-            time.sleep(3.5)
+        # Collect all dates within the week
+        dates_this_week = [date]
+        for soup_date in soup_dates:
+            if re.search(r'\d', soup_date.string):
+                dates_this_week.append(dt.datetime.strptime(soup_date.string, '%B %d, %Y').date())
+        dates_this_week = sorted(dates_this_week)
 
-    date += dt.timedelta(days=3)
+        # Process each date in the current week's list
+        for date_this_week in dates_this_week:
+            if date_this_week in genned_dates:
+                continue
+            else:
+                insert_daily_games_at_date(date_this_week)
+                time.sleep(3.5)  # Rate limiting
 
-    # Kicks you out if you request over 20 times over a minute
-    time.sleep(3.5)
-    backfill_games(date, genned_dates)
-    return
+        # Move to the next date to process
+        date += dt.timedelta(days=3)
+
+        # Rate limiting to avoid overloading the server
+        time.sleep(3.5)

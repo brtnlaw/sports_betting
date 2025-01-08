@@ -5,6 +5,7 @@ from dataclasses import dataclass
 import numpy as np
 import pandas as pd
 
+# Will probably have to redo this if I can't get support on my API anymore...
 @dataclass
 class PlayerProp:
     name: str

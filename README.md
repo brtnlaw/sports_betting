@@ -30,3 +30,12 @@ database:
   port:
 ```
 - Set up the anacron job
+
+When editing, make sure to activate the venv. 
+
+If not done yet,
+```
+python -m venv venv
+./venv/Scripts/activate
+pip install -e C:\Users\brtnl\OneDrive\Desktop\code\sports_betting
+```

@@ -38,6 +38,18 @@ def get_nba_games():
     url = BASE_URL + '/beta/games/nba?' + params
     return get_request(url)
 
+def get_games(league: str):
+    assert league in ["nba", "nfl"]
+    now = datetime.now()
+    query_params = {
+        'date': now.strftime('%Y-%m-%d'),
+        'tz': 'America/Chicago',
+        'api_key': API_KEY,
+    }
+    params = urllib.parse.urlencode(query_params)
+    url = BASE_URL + '/beta/games/{league}?' + params
+    return get_request(url)
+
 
 def get_game_info(game_id):
     query_params = {
@@ -65,7 +77,7 @@ def get_most_recent_odds(game_id, market):
     url = BASE_URL + '/beta/odds/' + game_id + '/' + market + '?' + params
     return get_request(url)
 
-# I think I'm out of requests....
+# I think I'm out of requests...., I can do it once every 30 minutes basically
 def get_games_at_date(date):
     query_params = {
         'date': date.strftime('%Y-%m-%d'),
