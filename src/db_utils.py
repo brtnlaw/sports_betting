@@ -11,7 +11,7 @@ import yaml
 from typing import Callable, List, Optional
 
 
-def load_config(config_path: str = "/config/config.yaml") -> dict[str]:
+def load_config(config_path: str = "./config/config.yaml") -> dict[str]:
     """
     Loads config file.
 
@@ -200,6 +200,8 @@ def insert_data(
     ) -> None: 
     """
     Framework for inserting clean data into Postgres. If no data and log_query is not None, then pastes a row with just the date.
+    Note that this relies upon queries written in an INSERT format. By design, we rely on the existing table to generate new data, 
+    so upserts in consecutive steps (quarters after generating the games) are necessarily updates.
 
     Args:
         get_table_function (Callable): Function which generates the clean dataframe.
@@ -222,6 +224,7 @@ def insert_data(
 
     # If empty, insert audit placeholder for that date
     if all_data_table is None:
+        # TODO: check if this works on update
         if log_query:
             log_table = get_insert_table(log_query)
             empty_log_query = f"""
@@ -242,7 +245,8 @@ def insert_data(
         return
     
     # Remove cancelled game data
-    all_data_table.dropna(inplace=True, subset=["home_points", "visitor_points"])
+    if "home_points" in all_data_table.columns or "visitor_points" in all_data_table.columns:
+        all_data_table.dropna(inplace=True, subset=["home_points", "visitor_points"])
     
     # Split up each row value into tuples
     row_tuples = [tuple(row) for row in all_data_table.values]

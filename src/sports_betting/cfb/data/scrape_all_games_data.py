@@ -34,9 +34,9 @@ def clean_df(df: pd.DataFrame, date: dt.datetime) -> pd.DataFrame:
     Returns:
         pd.DataFrame: Cleaned dataframe
     """
-    # The last two rows will always be home, followed by visitor. At times, there will be a bowl header row
-    home_row = df.iloc[-2]
-    visitor_row = df.iloc[-1]
+    # The last two rows will always be visitor, followed by home. At times, there will be a bowl header row
+    home_row = df.iloc[-1]
+    visitor_row = df.iloc[-2]
     home, home_rank = get_rank_from_row(home_row)
     home_points = home_row[1]
     visitor, visitor_rank = get_rank_from_row(visitor_row)
