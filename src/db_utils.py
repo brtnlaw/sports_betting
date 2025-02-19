@@ -1,18 +1,17 @@
 import hashlib
 import pandas as pd
 import datetime as dt
-import matplotlib.pyplot as plt
-import numpy as np
 import os
 import psycopg2
 import sqlparse
+import re
 import warnings
 import psycopg2.extras
 import yaml
 from typing import Callable, List, Optional
 
 
-def load_config(config_path: str = "../../config/config.yaml") -> dict[str]:
+def load_config(config_path: str = "/config/config.yaml") -> dict[str]:
     """
     Loads config file.
 
@@ -50,6 +49,25 @@ def execute_sql_script(sql_file_path: str) -> None:
             print(e)
     return None
 
+
+def get_rank_from_row(row: pd.Series, column_name: str = 0) -> tuple[str, Optional[int]]:
+    """
+    Gets the program's rank from the row. 
+
+    Args:
+        row (pd.Series): Row given by df
+
+    Returns:
+        tuple[str, str]: University and rank, if applicable
+    """
+    pattern = r"^(.*?)\s\((\d{1,2})\)$"
+    university = row[column_name]
+    match = re.fullmatch(pattern, university)
+    if match:
+         return match.group(1), int(match.group(2))
+    else:
+         return university, None
+    
 
 def generate_unique_player_id(row: pd.Series) -> str:
     """
@@ -222,6 +240,10 @@ def insert_data(
                     print (e)
         conn.close()
         return
+    
+    # Remove cancelled game data
+    all_data_table.dropna(inplace=True, subset=["home_points", "visitor_points"])
+    
     # Split up each row value into tuples
     row_tuples = [tuple(row) for row in all_data_table.values]
 

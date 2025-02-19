@@ -6,7 +6,7 @@ from io import StringIO
 from urllib.request import urlopen
 from typing import Optional
 import time
-from db_utils import generate_unique_game_id, insert_data, retrieve_data
+from db_utils import generate_unique_game_id, insert_data, retrieve_data, get_rank_from_row
 
 def is_valid_date(date_string: str) -> bool:
     """
@@ -22,23 +22,6 @@ def is_valid_date(date_string: str) -> bool:
     pattern = r'^(?:\w{3,9},\s)?\w{3,9}\s\d{1,2},\s\d{4}$'
     return bool(re.match(pattern, date_string))
 
-def get_rank_from_row(row: pd.Series) -> tuple[str, Optional[int]]:
-    """
-    Gets the program's rank from the row. 
-
-    Args:
-        row (pd.Series): Row given by df
-
-    Returns:
-        tuple[str, str]: University and rank, if applicable
-    """
-    pattern = r"^(.*?)\s\((\d{1,2})\)$"
-    university = row[0]
-    match = re.fullmatch(pattern, university)
-    if match:
-         return match.group(1), int(match.group(2))
-    else:
-         return university, None
 
 def clean_df(df: pd.DataFrame, date: dt.datetime) -> pd.DataFrame: 
     """
@@ -110,7 +93,8 @@ def get_daily_games_at_date(date: dt.date) -> Optional[pd.DataFrame]:
 
     # Kicks you out if you request over 20 times over a minute
     time.sleep(3.5)
-    return pd.concat(game_list)
+    # Will have duplicates at times
+    return pd.concat(game_list).drop_duplicates()
 
     
 def insert_daily_games_at_date(date: dt.date) -> None:
@@ -138,22 +122,19 @@ def insert_daily_games_at_date(date: dt.date) -> None:
     """
     insert_data(get_table_function=get_table_function, params=params, query=query, log_query=log_query)
 
-def backfill_games(date: dt.date = dt.date(2013, 12, 31), genned_dates: Optional[set] = None) -> None:
+def backfill_games(date: dt.date = dt.date(2013, 12, 31)) -> None:
     """
-    Backfills CFB games from starting point date.
-    Command: python src/cfb/data/scrape_all_games_data.py backfill_games
+    Backfills CFB games from starting point date. Increments to the next set of un-genned dates.
 
     Args:
-        starting_date (dt.date, optional): Starting date. Defaults to dt.date(2013, 12, 31).
+        date (dt.date, optional): Considered date. Defaults to dt.date(2013, 12, 31).
     """
-    if not genned_dates:
-        # Given that games are done a full day at a time, should not be possible to have partial slates logged
-        date_query = """
-        SELECT DISTINCT date
-        FROM cfb.all_games_log
-        """
-        genned_dates = set(retrieve_data(date_query)["date"])
-
+    # Given that games are done a full day at a time, should not be possible to have partial slates logged
+    date_query = """
+    SELECT DISTINCT date
+    FROM cfb.all_games_log
+    """
+    genned_dates = set(retrieve_data(date_query)["date"])
     while True:
         # Adjust the date to skip already processed dates or those outside the CFB season
         while date in genned_dates or not (
@@ -195,6 +176,7 @@ def backfill_games(date: dt.date = dt.date(2013, 12, 31), genned_dates: Optional
                 continue
             else:
                 insert_daily_games_at_date(date_this_week)
+                genned_dates.add(date_this_week)
                 time.sleep(3.5)  # Rate limiting
 
         # Move to the next date to process
@@ -202,3 +184,7 @@ def backfill_games(date: dt.date = dt.date(2013, 12, 31), genned_dates: Optional
 
         # Rate limiting to avoid overloading the server
         time.sleep(3.5)
+
+if __name__ == "__main__":
+    # python src/sports_betting/cfb/data/scrape_all_games_data.py
+    backfill_games()
