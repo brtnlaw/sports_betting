@@ -257,7 +257,7 @@ def insert_data(
         if log_cols:
             for log_col in log_cols:
                 # Data passes the audit, i.e. column we want to log is true
-                all_log_table[log_col] = True
+                all_log_table.loc[:, [log_col]] = True
         log_row_tuples = [tuple(row) for row in all_log_table.values]
 
     with conn.cursor() as cursor:

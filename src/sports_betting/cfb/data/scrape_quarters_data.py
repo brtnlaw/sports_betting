@@ -47,15 +47,19 @@ def get_quarters_data_at_date_home(date: dt.date, home: str) -> pd.DataFrame:
             # Map the column to the data (indexed from 1)
             col_dict[col] = int(df[str(j+1)][i])
             pt_total += col_dict[col]
+
         # If we go into OT
+        ot_col = f"{team[i]}_ot_total"
         if df.columns[-2] != "4":
             num_ot = df.columns[-2]
             # If there are 3 OT's, want to sum from OT1 to OT3
-            ot_col = f"{team[i]}_ot_total"
             ot_total = sum(df.loc[i, "OT1":num_ot])
             col_dict[ot_col] = ot_total
             pt_total += ot_total
             col_dict["OT"] = num_ot
+        else:
+            col_dict[ot_col] = 0
+            col_dict["OT"] = None
         assert pt_total == int(df.iloc[i,-1:].iloc[0]), "Quarter points don't add up to final"
 
     col_dict["date"] = date
@@ -100,39 +104,47 @@ def insert_quarters_data_at_date_home(date: dt.date, home: str) -> None:
             home_ot_total = EXCLUDED.home_ot_total;
     """
     log_query = """
-        INSERT INTO cfb.all_games_log(unique_id, date)
+        INSERT INTO cfb.all_games_log(unique_id, date, all_quarters_scrape)
         VALUES %s
         ON CONFLICT (unique_id, date) 
         DO UPDATE SET
             all_quarters_scrape = EXCLUDED.all_quarters_scrape
     """
-    insert_data(get_table_function=get_table_function, params=params, query=query, log_query=log_query)
+    insert_data(get_table_function=get_table_function, params=params, query=query, log_query=log_query, log_cols=["all_quarters_scrape"])
 
 
 def backfill_data_for_table() -> None:
     """
     Generates quarters data for dates in CFB table.
     """
-    # Given that games are done a full day at a time, should not be possible to have partial slates logged
     date_query = """
-    SELECT DISTINCT date, home
+    SELECT DISTINCT date, unique_id
     FROM cfb.all_games_log
     WHERE all_quarters_scrape IS NOT TRUE
     ORDER BY date ASC
     """
-    ungenned_games = retrieve_data(date_query)
-    # Iterates through the games ordered by date, adds quarter data, then removes it from the ungenned_dates
-    while ungenned_games:
-        game = ungenned_games.iloc[0]
-        date = game["date"]
-        home = game["home"]
-        print(f"Backfilling {date} at {home}")
-        get_quarters_data_at_date_home(date, home)
-        # Drop the row with game after everything done
-        ungenned_games = ungenned_games[1:]
-    pass
+    # Generate ids for which quarters not genned
+    ungenned_ids = list(retrieve_data(date_query)["unique_id"])
 
-# TODO: redo ALL of the unique_ids...
+    # Filter out genned games
+    # TODO: figure out why I can't use there WHERE, ANY clause properly, not important now
+    home_query = """
+    SELECT DISTINCT date, home, unique_id
+    FROM cfb.all_games ag
+    ORDER BY date ASC
+    """
+    all_games_df = retrieve_data(home_query)
+    all_games_df = all_games_df[all_games_df["unique_id"].isin(ungenned_ids)]
+
+    # Iterates through the games ordered by date, adds quarter data, then removes it from the ungenned_dates
+    while ungenned_ids:
+        id = ungenned_ids.pop(0)
+        game = all_games_df[all_games_df["unique_id"] == id]
+        date = game["date"].iloc[0]
+        home = game["home"].iloc[0]
+        print(f"Backfilling {date} at {home}")
+        insert_quarters_data_at_date_home(date, home)
+
 if __name__ == "__main__":
     # python src/sports_betting/cfb/data/scrape_quarters_data.py
-    insert_quarters_data_at_date_home(dt.date(2024, 9, 20), "Washington State")
+    backfill_data_for_table()
