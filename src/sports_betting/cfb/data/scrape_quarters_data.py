@@ -6,6 +6,7 @@ from io import StringIO
 from urllib.request import urlopen
 from db_utils import retrieve_data, get_rank_from_row, generate_unique_game_id, insert_data
 from typing import Optional
+import time
 
 
 def get_quarters_data_at_date_home(date: dt.date, home: str) -> pd.DataFrame:
@@ -33,8 +34,13 @@ def get_quarters_data_at_date_home(date: dt.date, home: str) -> pd.DataFrame:
     visitor_row["Unnamed: 1"].replace(u'\xa0', ' ')
     visitor = get_rank_from_row(visitor_row, "Unnamed: 1")[0]
 
+    # Special case mapping where key is diving into individual game, value is in the aggregate view
+    naming_dict = {"Nevada-Las Vegas": "UNLV"}
+    standardized_home_id = home if home not in naming_dict else naming_dict[home]
+    standardized_visitor_id = visitor if visitor not in naming_dict else naming_dict[visitor]
+
     # Generate unique_id to match to
-    unique_id = generate_unique_game_id(pd.Series({'Date': date, 'Visitor': visitor, 'Home': home}))
+    unique_id = generate_unique_game_id(pd.Series({'Date': date, 'Visitor': standardized_visitor_id, 'Home': standardized_home_id}))
 
     team = ["visitor", "home"]
     quarter = ["first_quarter", "second_quarter", "third_quarter", "fourth_quarter"]
@@ -63,10 +69,12 @@ def get_quarters_data_at_date_home(date: dt.date, home: str) -> pd.DataFrame:
         assert pt_total == int(df.iloc[i,-1:].iloc[0]), "Quarter points don't add up to final"
 
     col_dict["date"] = date
-    col_dict["home"] = home
-    col_dict["visitor"] = visitor
+    col_dict["home"] = standardized_home_id
+    col_dict["visitor"] = standardized_visitor_id
     col_dict["unique_id"] = unique_id
-
+    
+    # Kicks you out if you request over 20 times over a minute
+    time.sleep(3.5)
     col_df = pd.DataFrame([col_dict])
     return col_df
 
@@ -125,7 +133,6 @@ def backfill_data_for_table() -> None:
     """
     # Generate ids for which quarters not genned
     ungenned_ids = list(retrieve_data(date_query)["unique_id"])
-
     # Filter out genned games
     # TODO: figure out why I can't use there WHERE, ANY clause properly, not important now
     home_query = """
@@ -136,6 +143,8 @@ def backfill_data_for_table() -> None:
     all_games_df = retrieve_data(home_query)
     all_games_df = all_games_df[all_games_df["unique_id"].isin(ungenned_ids)]
 
+    # TODO: UNLV maps to Nevada-LasVegas inside...
+
     # Iterates through the games ordered by date, adds quarter data, then removes it from the ungenned_dates
     while ungenned_ids:
         id = ungenned_ids.pop(0)
@@ -144,6 +153,9 @@ def backfill_data_for_table() -> None:
         home = game["home"].iloc[0]
         print(f"Backfilling {date} at {home}")
         insert_quarters_data_at_date_home(date, home)
+
+        # Rate limiting to avoid overloading the server
+        time.sleep(3.5)
 
 if __name__ == "__main__":
     # python src/sports_betting/cfb/data/scrape_quarters_data.py
