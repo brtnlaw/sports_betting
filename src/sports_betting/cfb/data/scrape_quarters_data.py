@@ -20,7 +20,23 @@ def get_quarters_data_at_date_home(date: dt.date, home: str) -> pd.DataFrame:
     Returns:
         pd.DataFrame: Quarter score data. 
     """
-    home_str = home.replace(" ", "-").lower()
+    url_dict = {
+        "UCF": "central-florida",
+        "SMU": "southern-methodist",
+        "TCU": "texas-christian",
+        "Pitt": "pittsburgh",
+        "LSU": "louisiana-state",
+        "Ole Miss": "mississippi",
+        "Louisiana": "louisiana-lafayette",
+        "UAB": "alabama-birmingham",
+        "USC": "southern-california",
+        "UTSA": "texas-san-antonio",
+        "UNLV": "nevada-las-vegas",
+        "UTEP": "texas-el-paso"
+    }
+    # 2013-08-31 Virginia, take a look at
+    adjust_home = lambda text: re.sub(r'[()&]', '', text).replace(" ", "-").lower()
+    home_str = adjust_home(home) if home not in url_dict else url_dict[home]
     base_url = "https://www.sports-reference.com/cfb/boxscores/"
     url = f"{base_url}/{date.strftime('%Y-%m-%d')}-{home_str}.html"
     html = urlopen(url)
@@ -35,10 +51,13 @@ def get_quarters_data_at_date_home(date: dt.date, home: str) -> pd.DataFrame:
     visitor = get_rank_from_row(visitor_row, "Unnamed: 1")[0]
 
     # Special case mapping where key is diving into individual game, value is in the aggregate view
-    naming_dict = {"Nevada-Las Vegas": "UNLV"}
+    naming_dict = {
+        "Nevada-Las Vegas": "UNLV",
+        "BYU": "Brigham Young",
+        "Bowling Green": "Bowling Green State"
+        }
     standardized_home_id = home if home not in naming_dict else naming_dict[home]
     standardized_visitor_id = visitor if visitor not in naming_dict else naming_dict[visitor]
-
     # Generate unique_id to match to
     unique_id = generate_unique_game_id(pd.Series({'Date': date, 'Visitor': standardized_visitor_id, 'Home': standardized_home_id}))
 
@@ -142,8 +161,6 @@ def backfill_data_for_table() -> None:
     """
     all_games_df = retrieve_data(home_query)
     all_games_df = all_games_df[all_games_df["unique_id"].isin(ungenned_ids)]
-
-    # TODO: UNLV maps to Nevada-LasVegas inside...
 
     # Iterates through the games ordered by date, adds quarter data, then removes it from the ungenned_dates
     while ungenned_ids:
