@@ -186,5 +186,5 @@ def backfill_games(date: dt.date = dt.date(2013, 12, 31)) -> None:
         time.sleep(3.5)
 
 if __name__ == "__main__":
-    # python src/sports_betting/cfb/data/scrape_all_games_data.py
+    # python src/cfb/data/scrape_all_games_data.py
     backfill_games()

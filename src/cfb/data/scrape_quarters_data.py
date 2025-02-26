@@ -34,7 +34,6 @@ def get_quarters_data_at_date_home(date: dt.date, home: str) -> pd.DataFrame:
         "UNLV": "nevada-las-vegas",
         "UTEP": "texas-el-paso"
     }
-    # 2013-08-31 Virginia, take a look at
     adjust_home = lambda text: re.sub(r'[()&]', '', text).replace(" ", "-").lower()
     home_str = adjust_home(home) if home not in url_dict else url_dict[home]
     base_url = "https://www.sports-reference.com/cfb/boxscores/"
@@ -175,5 +174,5 @@ def backfill_data_for_table() -> None:
         time.sleep(3.5)
 
 if __name__ == "__main__":
-    # python src/sports_betting/cfb/data/scrape_quarters_data.py
+    # python src/cfb/data/scrape_quarters_data.py
     backfill_data_for_table()

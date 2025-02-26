@@ -20,7 +20,7 @@ Looks for relative value within betting odds. Compares synthetic lines to get th
 ```
 pip install -r requirements.txt
 ```
-- Set up a config.yaml file under src
+- Set up a config.yaml file under the config folder
 ```
 database:
   dbname: 
