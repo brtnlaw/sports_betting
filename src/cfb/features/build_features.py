@@ -2,6 +2,16 @@ import pandas as pd
 from sklearn.preprocessing import OneHotEncoder
 from typing import Optional
 
+"""
+Ideas:
+- Rolling 3 game window of points gained/allowed, or if not, perhaps on the season (would be on the prior games) "Recent form"
+- Same as above, but yardage
+- How many games into the season? Bowl game?
+- Kalman filter for rolling
+
+TODOs:
+- Categorizing features (examples given were Offense, Defense, etc.)
+"""
 def clean_df(df: pd.DataFrame, useless_cols: Optional[list] = ["ot", "unique_id", "created_at"]) -> pd.DataFrame: 
     """
     Clean up unnecesary columns from df. Fills in NaNs.
@@ -63,8 +73,37 @@ def add_halves(df):
                      inplace=True)
     return df
 
-def add_features(df, functions = [encode_team_name, add_temporal_features, add_halves]):
+def add_recent_form(df):
+    # TODO: Kalman
+    # Before one-hot encoding for simplicity, but after halves
+    # make performance as a home and visitor the same. we will begin with a simple version
+    # points against recent form (defense)
+    home_df = df[['date', 'home', 'home_half', 'home_points', 'visitor_half', 'visitor_points']].rename(
+        columns={'home': 'team', 'home_half': 'half', 'home_points': 'points', 'visitor_half': 'opp_half', 'visitor_points': 'opp_points'})
+    visitor_df = df[['date', 'visitor', 'visitor_half', 'visitor_points']].rename(
+        columns={'visitor': 'team', 'visitor_half': 'half','visitor_points': 'points', 'home_half': 'opp_half', 'home_points': 'opp_points'})
+    game_df = pd.concat([home_df, visitor_df])
+    game_df.sort_values(by=["team", "date"], inplace=True)
+    game_df[["rolling_half", "rolling_points", "rolling_opp_half", "rolling_opp_points"]] = game_df.groupby(
+        'team')[['half', 'points', 'opp_half', "opp_points"]].rolling(window=3, min_periods=1).mean().reset_index(level=0, drop=True)
+
+    df = df.merge(game_df[['date', 'team', "rolling_half", "rolling_points", "rolling_opp_half", "rolling_opp_points" ]],
+                   left_on=['date', 'home'], right_on=['date', 'team'], how='left')
+    df = df.rename(columns={'rolling_points': 'home_rolling_points', 
+                            'rolling_opp_half': 'home_rolling_opp_half', 
+                            'rolling_opp_points': 'home_rolling_opp_points'}).drop(columns=['team'])
+    
+    df = df.merge(game_df[['date', 'team', "rolling_half", "rolling_points", "rolling_opp_half", "rolling_opp_points" ]], 
+                left_on=['date', 'visitor'], right_on=['date', 'team'], how='left')
+    df = df.rename(columns={'rolling_half': 'visitor_rolling_half', 
+                            'rolling_points': 'visitor_rolling_points', 
+                            'rolling_opp_half': 'visitor_rolling_opp_half', 
+                            'rolling_opp_points': 'visitor_rolling_opp_points'}).drop(columns=['team'])
+    return df
+
+def add_features(df, functions = [add_halves, add_recent_form, add_temporal_features, encode_team_name]):
     df = clean_df(df)
     for function in functions:
         df = function(df)
+    df.columns = df.columns.str.replace(' ', '_')
     return df

@@ -50,10 +50,12 @@ def get_quarters_data_at_date_home(date: dt.date, home: str) -> pd.DataFrame:
     visitor = get_rank_from_row(visitor_row, "Unnamed: 1")[0]
 
     # Special case mapping where key is diving into individual game, value is in the aggregate view
+    # TODO: delete TCU
     naming_dict = {
         "Nevada-Las Vegas": "UNLV",
         "BYU": "Brigham Young",
-        "Bowling Green": "Bowling Green State"
+        "Bowling Green": "Bowling Green State",
+        "Texas Christian": "TCU"
         }
     standardized_home_id = home if home not in naming_dict else naming_dict[home]
     standardized_visitor_id = visitor if visitor not in naming_dict else naming_dict[visitor]
