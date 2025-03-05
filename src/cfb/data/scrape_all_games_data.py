@@ -155,6 +155,8 @@ def backfill_games(date: dt.date = dt.date(2013, 12, 31)) -> None:
             break
 
         # Fetch and process games for the current date
+        # TODO: 8/27/16 to be ignored for Cal
+        # TODO: Save Coastal Carolina's 2016 season
         base_url = "https://www.sports-reference.com/cfb/boxscores/index.cgi"
         url = f"{base_url}?month={date.month}&day={date.day}&year={date.year}"
         html = urlopen(url)
