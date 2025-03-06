@@ -11,7 +11,8 @@ import time
 
 def get_quarters_data_at_date_home(date: dt.date, home: str) -> pd.DataFrame:
     """
-    Gets quarters data for a game given by its date and home team
+    Only for use as a backup to cfbd API pulls, as it's significantly slower. If the game pkl files exist, use those instead. 
+    Gets quarters data for a game given by its date and home team. 
 
     Args:
         date (str): Date of game.
@@ -55,7 +56,8 @@ def get_quarters_data_at_date_home(date: dt.date, home: str) -> pd.DataFrame:
         "Nevada-Las Vegas": "UNLV",
         "BYU": "Brigham Young",
         "Bowling Green": "Bowling Green State",
-        "Texas Christian": "TCU"
+        "Texas Christian": "TCU",
+        "Houston Baptist": "Houston Christian"
         }
     standardized_home_id = home if home not in naming_dict else naming_dict[home]
     standardized_visitor_id = visitor if visitor not in naming_dict else naming_dict[visitor]
@@ -98,6 +100,8 @@ def get_quarters_data_at_date_home(date: dt.date, home: str) -> pd.DataFrame:
     col_df = pd.DataFrame([col_dict])
     return col_df
 
+def get_quarters_from_api():
+    pass
 
 def insert_quarters_data_at_date_home(date: dt.date, home: str) -> None:
     """
