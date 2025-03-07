@@ -11,7 +11,9 @@ load_dotenv
 PROJECT_ROOT = os.getenv("PROJECT_ROOT", os.getcwd())
 
 
-def load_config(config_path: str = os.path.join(PROJECT_ROOT, "config/config.yaml")) -> dict[str]:
+def load_config(
+    config_path: str = os.path.join(PROJECT_ROOT, "config/config.yaml")
+) -> dict[str]:
     """
     Loads config file.
 
@@ -38,20 +40,19 @@ def execute_sql_script(sql_file_path: str) -> None:
     db_config = config["database"]
     conn = psycopg2.connect(**db_config)
     try:
-        with open(sql_file_path, 'r') as file:
-                sql_commands = file.read()
+        with open(sql_file_path, "r") as file:
+            sql_commands = file.read()
 
         with conn.cursor() as cursor:
-                cursor.execute(sql_commands)
-                conn.commit()
+            cursor.execute(sql_commands)
+            conn.commit()
     except Exception as e:
-            conn.rollback()
-            print(e)
+        conn.rollback()
+        print(e)
     return None
 
 
-def retrieve_data(query: str, params: Optional[dict] = None) -> Optional[pd.DataFrame]:
-    # TODO: Perhaps consider instead of passing in the query every time, doing something like "cfb" "games" just for ease of use.
+def pull_from_db(query: str, params: Optional[dict] = None) -> Optional[pd.DataFrame]:
     """
     Wrapper for pulling from the database given a query.
 
@@ -79,11 +80,38 @@ def retrieve_data(query: str, params: Optional[dict] = None) -> Optional[pd.Data
 
     # Close the cursor and connection
     conn.close()
-
     return data
 
 
-def insert_data(query, data):
+def retrieve_data(schema: str, table: str) -> pd.DataFrame:
+    """
+    Helper function to get data. Pass in a schema, table to get all the data from PostgreSQL.
+
+    Args:
+        schema (str): Schema to insert into. In this case, the market.
+        table (str): Table within the schema to insert into.
+
+    Returns:
+        pd.DataFrame: Desired data queried.
+    """
+    schema_tables = {"cfb": ["games", "venues"]}
+    if schema not in schema_tables.keys():
+        raise Exception(f"Select a schema in {schema_tables.keys()}")
+    if table not in schema_tables[schema]:
+        raise Exception(f"Select a table in {schema_tables[schema]}")
+    query = f"""SELECT * FROM {schema}.{table}"""
+    data = pull_from_db(query)
+    return data
+
+
+def insert_data_to_db(query: str, data: pd.DataFrame) -> None:
+    """
+    Wrapper for inserting data in the correct format into the database.
+
+    Args:
+        query (str): Query to insert, inclusive of where the data is going.
+        data (pd.DataFrame): Data to insert.
+    """
     config = load_config()
     db_config = config["database"]
     try:
