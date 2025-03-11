@@ -32,5 +32,6 @@ CREATE TABLE IF NOT EXISTS cfb.games (
     excitement_index              DECIMAL(12, 8) NULL,
     highlights                    TEXT NULL,
     notes                         TEXT NULL,
+    PRIMARY KEY (id),
     FOREIGN KEY (venue_id) REFERENCES cfb.venues(id) ON DELETE SET NULL
 );

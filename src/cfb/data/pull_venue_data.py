@@ -3,7 +3,7 @@ from cfbd.rest import ApiException
 from dotenv import load_dotenv
 import pandas as pd
 import pickle as pkl
-from db_utils import insert_data
+from db_utils import insert_data_to_db
 import os
 import warnings
 
@@ -43,6 +43,7 @@ class CFBVenueData:
             venues = self.api.get_venues()
             with open(self._pkl_path, "wb") as f:
                 pkl.dump(venues, f)
+            print(f"Successfully pickled to {self._pkl_path}")
         except ApiException as e:
             print("Error fetching venues: {e}")
 
@@ -92,7 +93,7 @@ class CFBVenueData:
         """
         print(f"Inserting venue data.")
         data = self.load_venues_from_pkl()
-        insert_data(query, data)
+        insert_data_to_db(query, data)
 
 
 if __name__ == "__main__":

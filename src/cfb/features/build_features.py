@@ -57,6 +57,7 @@ class Preprocessing(Feature):
         self.df["neutral_site"] = self.df["neutral_site"].apply(int)
         self.df["conference_game"] = self.df["conference_game"].apply(int)
         self.df.fillna(0)
+        self.df.sort_values(by="start_date")
 
     def remove_nan_rows(self):
         # Gets rid of empty home and away points and quarterly data
@@ -78,6 +79,7 @@ class Preprocessing(Feature):
         # TODO: for each nan elo & excitement index, for every team, get a rolling average of the previous.
         # for now, just to get things going, we fill with 0
         self.df.fillna(0, inplace=True)
+        self.df.reset_index(drop=True, inplace=True)
 
     def encode_categorical_cols(self):
         # One hot encodes, then drops all categorical columns
