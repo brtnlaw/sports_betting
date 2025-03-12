@@ -1,4 +1,4 @@
-# Use pickle to store models
+# Use pickle to store models, or json!
 import pickle
 import pandas as pd
 import numpy as np
@@ -9,6 +9,8 @@ from sklearn.model_selection import train_test_split, TimeSeriesSplit
 
 MODELS = {"linear_regression": LinearRegression(), "light_gbm": lgb}
 RANDOM_SEED = 12345
+
+# Think the main alpha would be in using sharp lines to price less-sharp lines (i.e. o/u to price halves)
 
 
 def train_model(X_train: pd.DataFrame, y_train: pd.Series, model_name="light_gbm"):

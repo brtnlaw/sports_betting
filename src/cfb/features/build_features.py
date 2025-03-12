@@ -1,6 +1,4 @@
 import pandas as pd
-from sklearn.preprocessing import OneHotEncoder
-from typing import Optional
 
 
 class Feature:
@@ -29,7 +27,7 @@ class Preprocessing(Feature):
     def clean_cols(self):
         # Gets rid of columns with no predictive value and fixes typing
         useless_cols = [
-            "id",
+            # "id",
             "start_time_tbd",
             "completed",
             "home_id",
@@ -172,7 +170,19 @@ class Preprocessing(Feature):
                 "previous_game_home",
                 "team_away",
                 "previous_game_away",
-                "start_date",
+                # "start_date",
+            ],
+            inplace=True,
+        )
+
+    def pred_ou(self):
+        self.df["total"] = self.df["home_points"] + self.df["away_points"]
+        self.df.drop(
+            columns=[
+                "home_points",
+                "away_points",
+                "home_line_scores",
+                "away_line_scores",
             ],
             inplace=True,
         )
@@ -182,7 +192,8 @@ class Preprocessing(Feature):
         self.date_to_days_since()  # Goes before encoding
         self.remove_nan_rows()  # Goes after date to days since, removes first instance of a team (no data)
         self.encode_categorical_cols()
-        self.expand_quarters()
+        # self.expand_quarters()
+        self.pred_ou()
         return self.df
 
 
