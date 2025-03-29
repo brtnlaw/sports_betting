@@ -1,9 +1,13 @@
-import pandas as pd
-import matplotlib.pyplot as plt
 import warnings
-from data_preprocessing import Preprocessor
+
+import matplotlib.pyplot as plt
+import pandas as pd
 import strategy.betting_logic as betting_logic
-from train import train_model, evaluate_model_metrics
+from data.data_prep import DataPrep
+from data.data_preprocessing import Preprocessor
+from features.build_features import FeaturePipeline
+from model.train import train_model
+from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 
 warnings.simplefilter(action="ignore", category=FutureWarning)
 
@@ -19,10 +23,12 @@ def plot_pnl(df):
     plt.show()
 
 
-def cross_validate(df, X, y):
+def cross_validate(
+    odds_df, X, y, betting_fnc=betting_logic.simple_percentage, init_train_yrs=5
+):
     """Performs rolling cross-validation using past seasons to predict future ones."""
-    cv_year_indices = df.groupby("season").head(1).index
-    init_train_yrs = 5  # Number of initial seasons to train on
+    # Have to redo the below with new indices
+    cv_year_indices = X.groupby("season").head(1).index
     cv_year_indices = cv_year_indices[init_train_yrs:].append(pd.Index([df.index[-1]]))
 
     for i in range(len(cv_year_indices) - 1):
@@ -34,11 +40,12 @@ def cross_validate(df, X, y):
 
         # Train model & predict
         model = train_model(X_train, y_train)
-        df.loc[train_idx : test_idx - 1, "pred"] = model.predict(X_test)
+        odds_df.loc[train_idx : test_idx - 1, "pred"] = model.predict(X_test)
 
     # Apply betting logic & plot results
-    df = betting_logic.simple_percentage(df)
-    return model, df
+    odds_df = betting_fnc(odds_df)
+    # TODO: model.to_json (name)
+    return model, odds_df
 
 
 def evaluate_cv(model, df):
@@ -46,6 +53,7 @@ def evaluate_cv(model, df):
     y_pred = df["pred"]
     y_test = df["total"]
 
+    # TODO: Brier score?
     r2 = r2_score(y_test, y_pred)
     mse = mean_squared_error(y_test, y_pred)
     mae = mean_absolute_error(y_test, y_pred)
@@ -71,43 +79,23 @@ def evaluate_cv(model, df):
 
 
 if __name__ == "__main__":
-    # Run preprocessing pipeline
-    preprocessor = Preprocessor("cfb")
-    df, X, y = preprocessor.prepare_data(target_col="total")
-
-    # Perform backtesting
-    df, model = cross_validate(df, X, y)
-
-    """
-    
+    # python src/cfb/backtest.py
     print("Step 1: Loading data...")
     data_prep = DataPrep(dataset="cfb")
-    raw_data = data_prep.load_data()
+    raw_data = data_prep.get_data()
 
-    # 2. Feature Engineering
-    print("Step 2: Feature engineering...")
-    feature_engineering = FeatureEngineering(raw_data)
-    engineered_data = feature_engineering.apply_feature_engineering()
+    print("Step 2: Preprocessing data...")
+    preprocessor = Preprocessor(raw_data, "total")
+    odds_df, X, y = preprocessor.preprocess_data()
 
-    # 3. Preprocess Data for ML (cleaning, encoding, scaling, splitting) ^ switch this
-    print("Step 3: Data processing...")
-    data_processing = DataProcessing(engineered_data)
-    X_train, X_test, y_train, y_test = data_processing.prepare_data(target_col="total")
+    print("Step 3: Feature engineering...")
+    feature_pipeline = FeaturePipeline(X)
+    X = feature_pipeline.engineer_features()
 
     # 4. Train the Model
-    print("Step 4: Training the model...")
-    model = Model()
-    model.train(X_train, y_train)
-
+    print("Step 4: Training and evaluating the model...")
+    model, df = cross_validate(odds_df, X, y)
+    breakpoint()
     # 5. Evaluate the Model
     print("Step 5: Evaluating the model...")
-    y_pred = model.predict(X_test)
-    mse = mean_squared_error(y_test, y_pred)
-    r2 = r2_score(y_test, y_pred)
-    print(f"Mean Squared Error: {mse:.4f}")
-    print(f"R-squared: {r2:.4f}")
-
-    # 6. (Optional) Save the Model for Future Predictions
-    model.save_model()
-
-    """
+    evaluate_cv(model, df)

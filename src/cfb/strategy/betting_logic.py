@@ -15,3 +15,5 @@ def simple_percentage(df):
         (df["pred"] < 0.9 * df["min_ou"]) & (df["total"] > df["min_ou"]), "unit_pnl"
     ] = -1
     return df
+
+# Brier Score

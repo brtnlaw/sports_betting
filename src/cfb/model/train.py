@@ -1,11 +1,11 @@
 # Use pickle to store models, or json!
 import pickle
-import pandas as pd
-import numpy as np
-from sklearn.linear_model import LinearRegression
-from sklearn.metrics import r2_score, mean_squared_error, mean_absolute_error
+
 import lightgbm as lgb
-from sklearn.model_selection import train_test_split, TimeSeriesSplit
+import numpy as np
+import pandas as pd
+from sklearn.linear_model import LinearRegression
+from sklearn.model_selection import train_test_split
 
 MODELS = {"linear_regression": LinearRegression(), "light_gbm": lgb}
 RANDOM_SEED = 12345
@@ -39,7 +39,7 @@ def train_model(X_train: pd.DataFrame, y_train: pd.Series, model_name="light_gbm
     return model
 
 
-def train_and_pkl(X, y, model_name="light_gbm", pkl_name="test"):
+def train_and_json(X, y, model_name="light_gbm", pkl_name="test"):
     # TODO: TimeSeriesSplit this, but in each fold, what bet would be placed?
     X_train, X_test, y_train, y_test = train_test_split(
         X, y, test_size=0.2, random_state=RANDOM_SEED

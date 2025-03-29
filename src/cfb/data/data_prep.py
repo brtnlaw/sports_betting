@@ -1,4 +1,5 @@
 import pandas as pd
+
 from db_utils import retrieve_data
 
 
@@ -24,6 +25,7 @@ class DataPrep:
             how="left",
             left_on=["venue_id", "venue"],
             right_on=["id", "name"],
+            suffixes=("", "_venue"),
         )
 
         # Merge betting odds

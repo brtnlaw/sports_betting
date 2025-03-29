@@ -1,3 +1,5 @@
+import datetime as dt
+
 import pandas as pd
 
 
@@ -7,44 +9,20 @@ class Preprocessor:
     """
 
     def __init__(self, raw_data, target_col):
-        self.raw_data = raw_data
+        self.df = raw_data
         self.target_col = target_col
-        self.df = None
+        self.odds_df = None
         self.X = None
         self.y = None
 
-    def remove_nan_rows(self):
-        """Removes rows with missing game data."""
-        self.df["neutral_site"] = self.df["neutral_site"].astype(int)
-        self.df["conference_game"] = self.df["conference_game"].astype(int)
-        self.df.dropna(
-            subset=[
-                "home_points",
-                "away_points",
-                "home_line_scores",
-                "away_line_scores",
-                "home_days_since_last_game",
-                "away_days_since_last_game",
-            ],
-            inplace=True,
-        )
-        self.df = self.df[
-            self.df["home_line_scores"].apply(lambda x: len(x) >= 4)
-            & self.df["away_line_scores"].apply(lambda x: len(x) >= 4)
-        ]
-        self.df.sort_values(by="start_date", inplace=True)
-        self.df.fillna(0, inplace=True)
-        self.df.reset_index(drop=True, inplace=True)
-
     def encode_categorical_cols(self):
-        """One-hot encodes categorical columns and standardizes column names."""
+        """One-hot encodes categorical columns and standardizes column names. Betting columns are already excluded."""
         exclude_cols = [
             "home_line_scores",
             "away_line_scores",
             "start_date",
             "highlights",
             "is_grass",
-            # betting_cols already excluded
         ]
         categorical_cols = [
             col
@@ -56,6 +34,10 @@ class Preprocessor:
 
     def expand_quarters(self):
         """Expands quarterly game scores into separate columns."""
+        self.df = self.df[
+            self.df["home_line_scores"].apply(lambda x: len(x) >= 4)
+            & self.df["away_line_scores"].apply(lambda x: len(x) >= 4)
+        ]
         self.df["ot"] = self.df["home_line_scores"].apply(lambda x: int(len(x) > 4))
 
         for prefix in ["home", "away"]:
@@ -102,12 +84,10 @@ class Preprocessor:
                 how="left",
                 suffixes=("", f"_{side}"),
             )
+            self.df[f"previous_game_{side}"].fillna(dt.date(2000, 1, 1), inplace=True)
             self.df[f"{side}_days_since_last_game"] = (
-                (self.df["start_date"] - self.df[f"previous_game_{side}"])
-                .dt.days.fillna(0)
-                .astype(int)
-            )
-
+                self.df["start_date"] - self.df[f"previous_game_{side}"]
+            ).apply(lambda x: x.days)
         self.df.drop(
             columns=[
                 "team",
@@ -125,44 +105,49 @@ class Preprocessor:
             columns=[
                 "home_points",
                 "away_points",
-                "home_line_scores",
-                "away_line_scores",
             ],
             inplace=True,
         )
 
-    def split_df_X_y(self):
-        """Splits the dataframe into features (X) and target (y). The reason you have this at the end is we need to keep df for the respective odds."""
+    # ===============================
+    # Final steps
+    # ===============================
+
+    def remove_nan_rows(self):
+        """Removes rows with missing game data."""
+        self.df["neutral_site"] = self.df["neutral_site"].astype(int)
+        self.df["conference_game"] = self.df["conference_game"].astype(int)
+        self.df.dropna(
+            subset=[
+                "home_days_since_last_game",
+                "away_days_since_last_game",
+            ],
+            inplace=True,
+        )
+        self.df.sort_values(by="start_date", inplace=True)
+        self.df.fillna(0, inplace=True)
+        self.df.reset_index(drop=True, inplace=True)
+
+    def split_odds_X_y(self):
+        """Keeping the index together, splits into the odds, X, and y"""
         feature_cols = [
             col
             for col in self.df.columns
             if col not in ["id", "season", "start_date", self.target_col]
         ]
+        # The only time we should be setting the index
+        self.df.set_index("id", inplace=True)
+        # Note that the odds_df is only directly what we're trying to predict. Adjacent odds data is permissible.
+        betting_cols = ["min_ou", "max_ou"]
+        self.odds_df = self.df[[self.target_col] + betting_cols]
         self.X = self.df[feature_cols]
         self.y = self.df[self.target_col]
-        return self.df, self.X, self.y
 
     def preprocess_data(self):
         """Runs the full preprocessing pipeline and returns cleaned feature-target split."""
-        self.split_X_y()
-
-        # Preprocessing steps
-        self.load_data()
-        self.clean_columns()
         self.date_to_days_since()
-        self.remove_nan_rows()
         self.encode_categorical_cols()
         self.add_total_score()
-
-        # Sorting and final prep
-        self.df.sort_values(by="start_date", inplace=True)
-        self.df.reset_index(drop=True, inplace=True)
-
-        return self.df
-        # # Extract features and target
-        # feature_cols = [
-        #     col
-        #     for col in self.df.columns
-        #     if col not in ["id", "season", "start_date", target_col]
-        # ]
-        # return self.df, self.df[feature_cols], self.df[target_col]
+        self.remove_nan_rows()
+        self.split_odds_X_y()
+        return self.odds_df, self.X, self.y

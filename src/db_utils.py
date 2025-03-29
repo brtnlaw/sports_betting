@@ -1,11 +1,12 @@
-from dotenv import load_dotenv
 import os
+import warnings
+from typing import Optional
+
 import pandas as pd
 import psycopg2
 import psycopg2.extras
-from typing import Optional
-import warnings
 import yaml
+from dotenv import load_dotenv
 
 load_dotenv
 PROJECT_ROOT = os.getenv("PROJECT_ROOT", os.getcwd())

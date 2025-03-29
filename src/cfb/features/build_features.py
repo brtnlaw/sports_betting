@@ -46,13 +46,12 @@ class FeaturePipeline:
         """
         self.df = df
         self.steps = [
-            Preprocessing(df),
             # OffensiveFeatures(df),
             # DefensiveFeatures(df),
             # NeutralSiteFeatures(df),
         ]
 
-    def run(self) -> pd.DataFrame:
+    def engineer_features(self) -> pd.DataFrame:
         """
         Executes all feature engineering steps.
         """

@@ -1,11 +1,13 @@
+import os
+import pickle as pkl
+import warnings
+
 import cfbd
+import pandas as pd
 from cfbd.rest import ApiException
 from dotenv import load_dotenv
-import pandas as pd
-import pickle as pkl
+
 from db_utils import insert_data_to_db
-import os
-import warnings
 
 
 class CFBGameData:
