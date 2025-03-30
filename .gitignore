@@ -6,3 +6,4 @@
 *.mdl
 src/*.egg-info
 venv/
+.vscode/
