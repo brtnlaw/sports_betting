@@ -1,11 +1,6 @@
-# Use pickle to store models, or json!
-import pickle
-
 import lightgbm as lgb
-import numpy as np
 import pandas as pd
 from sklearn.linear_model import LinearRegression
-from sklearn.model_selection import train_test_split
 
 MODELS = {"linear_regression": LinearRegression(), "light_gbm": lgb}
 RANDOM_SEED = 12345
@@ -24,8 +19,7 @@ def train_model(X_train: pd.DataFrame, y_train: pd.Series, model_name="light_gbm
     elif model_name in ["light_gbm"]:
         params = {
             "boosting_type": "gbdt",
-            "objective": "regression",  # quantile? and see if there's a difference round up, get the quantile
-            # so like if it's 3.5 O/U 50%, i plug in 4 to the over and see 55%, then bet there
+            "objective": "regression",  # quantile? and see if there's a difference round up, get the quantile so like if it's 3.5 O/U 50%, i plug in 4 to the over and see 55%, then bet there
             "metric": {"l2", "l1"},
             "num_leaves": 31,
             "learning_rate": 0.05,
@@ -37,13 +31,3 @@ def train_model(X_train: pd.DataFrame, y_train: pd.Series, model_name="light_gbm
         lgb_train = lgb.Dataset(X_train, y_train)
         model = model.train(params, lgb_train)
     return model
-
-
-def train_and_json(X, y, model_name="light_gbm", pkl_name="test"):
-    # TODO: TimeSeriesSplit this, but in each fold, what bet would be placed?
-    X_train, X_test, y_train, y_test = train_test_split(
-        X, y, test_size=0.2, random_state=RANDOM_SEED
-    )
-    model = train_model(X_train, y_train, model_name)
-    with open(f"src/cfb/model/models/{pkl_name}.pkl", "wb") as f:
-        pickle.dump(model, f)

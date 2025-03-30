@@ -3,5 +3,6 @@
 *.yaml
 *.env 
 *.pkl
+*.mdl
 src/*.egg-info
 venv/
