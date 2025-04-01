@@ -46,8 +46,8 @@ class DaysSinceLastGameTransformer(BaseEstimator, TransformerMixin):
         return X_
 
 
-class RollingTransformer:
-    def init(
+class RollingTransformer(BaseEstimator, TransformerMixin):
+    def __init__(
         self, new_col, home_col, away_col, window_size, min_periods=1, agg_func="mean"
     ):
         self.new_col = new_col
@@ -98,31 +98,24 @@ class RollingTransformer:
             .shift(1)
             .rolling(window=self.window_size, min_periods=self.min_periods)
             .apply(func_map[self.agg_func], raw=True)
-            .reset_index(level=0, drop=True)
+            # .reset_index(level=0, drop=True)
+            .fillna(0)
         )
-        X_ = (
-            X_.reset_index()
-            .merge(
-                game_df[["start_date", "team", rolling_col_name]],
-                left_on=["start_date", "home_team"],
-                right_on=["start_date", "team"],
-                how="left",
-            )
-            .set_index("id")
-        )
+        X_ = X_.merge(
+            game_df[["start_date", "team", rolling_col_name]],
+            left_on=["start_date", "home_team"],
+            right_on=["start_date", "team"],
+            how="left",
+        ).reset_index(drop=True)
         X_ = X_.rename(columns={rolling_col_name: f"home_{rolling_col_name}"}).drop(
             columns=["team"]
         )
-        X_ = (
-            X_.reset_index()
-            .merge(
-                game_df[["start_date", "team", rolling_col_name]],
-                left_on=["start_date", "away_team"],
-                right_on=["start_date", "team"],
-                how="left",
-            )
-            .set_index("id")
-        )
+        X_ = X_.merge(
+            game_df[["start_date", "team", rolling_col_name]],
+            left_on=["start_date", "away_team"],
+            right_on=["start_date", "team"],
+            how="left",
+        ).reset_index(drop=True)
         X_ = X_.rename(columns={rolling_col_name: f"away_{rolling_col_name}"}).drop(
             columns=["team"]
         )
@@ -149,10 +142,11 @@ def offense_pipeline():
     return offense_pipeline
 
 
-def pipeline():
+def feature_pipeline():
     pipeline = Pipeline(
         [
             ("days_since", DaysSinceLastGameTransformer()),
+            ("offense_pipeline", offense_pipeline()),
         ]
     )
     return pipeline

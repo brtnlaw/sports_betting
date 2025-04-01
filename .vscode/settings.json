@@ -1,9 +1,0 @@
-{
-    "python.analysis.extraPaths": [
-        ".venv\\Lib\\site-packages",
-        "./src/cfb/model",
-        "./src/cfb",
-        "./src/cfb/data",
-        "./src/cfb/pipelines"
-    ]
-}
