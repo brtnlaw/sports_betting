@@ -5,6 +5,11 @@ import pickle as pkl
 import pandas as pd
 
 pd.options.mode.chained_assignment = None
+# NOTE: Possible future change is to adopt sklearn pipeline for readability.
+
+from sklearn.preprocessing import OneHotEncoder, StandardScaler
+
+# TODO: combine this into one pipeline, separating is extremely annoying
 
 
 class Preprocessor:
@@ -26,6 +31,20 @@ class Preprocessor:
         self.odds_df = None
         self.X = None
         self.y = None
+
+    def impute_by_columns(self):
+        fill_missing_with_group_mean = lambda df, col, group_col: df[col].fillna(
+            df.groupby(group_col)[col].transform("mean")
+        )
+        self.df["attendance"] = fill_missing_with_group_mean(
+            self.df, "attendance", "venue"
+        )
+        self.df["home_pregame_elo"] = fill_missing_with_group_mean(
+            self.df, "home_pregame_elo", "away_team"
+        )
+        self.df["away_pregame_elo"] = fill_missing_with_group_mean(
+            self.df, "away_pregame_elo", "home_team"
+        )
 
     def date_to_days_since(self):
         """Calculates days since last game for each team."""
@@ -122,8 +141,8 @@ class Preprocessor:
         self.df["total"] = self.df["home_points"] + self.df["away_points"]
         self.df.drop(
             columns=[
-                "home_points",
-                "away_points",
+                # "home_points",
+                # "away_points",
                 "home_line_scores",
                 "away_line_scores",
             ],
@@ -156,7 +175,7 @@ class Preprocessor:
         feature_cols = [
             col
             for col in self.df.columns
-            if col not in ["id", "start_date", self.target_col] + betting_cols
+            if col not in ["id", self.target_col] + betting_cols
         ]
         # The only time we should be setting the index
         self.df.set_index("id", inplace=True)
@@ -169,6 +188,7 @@ class Preprocessor:
     def preprocess_data(self):
         """Runs the full preprocessing pipeline and returns cleaned feature-target split."""
         process_list = [
+            self.impute_by_columns,
             self.date_to_days_since,
             self.encode_categorical_cols,
             self.add_total_score,

@@ -3,6 +3,7 @@
         ".venv\\Lib\\site-packages",
         "./src/cfb/model",
         "./src/cfb",
-        "./src/cfb/data"
+        "./src/cfb/data",
+        "./src/cfb/pipelines"
     ]
 }

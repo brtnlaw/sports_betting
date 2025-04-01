@@ -52,6 +52,7 @@ def plot_pnl(model_str, betting_fnc=betting_logic.simple_percentage):
 def plot_pnl_comparison(
     model_str, baseline_str="model_3_29_25", betting_fnc=betting_logic.simple_percentage
 ):
+    # TODO: Include target in model name.
     plot_model_df = load_pkl_if_exists(model_str, betting_fnc, "df")
     plot_baseline_df = load_pkl_if_exists(baseline_str, betting_fnc, "df")
 
@@ -115,7 +116,9 @@ def cross_validate(
 
 
 def model_metrics(
-    model_str, baseline_str="model_3_29_25", betting_fnc=betting_logic.simple_percentage
+    model_str,
+    baseline_str="baseline_3_30_25",
+    betting_fnc=betting_logic.simple_percentage,
 ):
     # NOTE: Max drawdown, Brier score
     plot_pnl_comparison(model_str, baseline_str)
@@ -186,3 +189,10 @@ if __name__ == "__main__":
     # 5. Evaluate the Model
     print("Step 5: Evaluating the model...")
     model_metrics(model, df)
+
+
+"""
+df = pipeline[-1].fit_transform(raw_data)
+df.columns = df.columns.str.split('__', n=1).str[-1]"
+# Workflow is get raw_data, have one step to get the odds_df out (with prediction, etc.), then plug the whole thing into pipeline
+"""
