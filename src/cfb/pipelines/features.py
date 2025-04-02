@@ -9,10 +9,22 @@ set_config(transform_output="pandas")
 
 
 class DaysSinceLastGameTransformer(BaseEstimator, TransformerMixin):
+    """Generates the days since last game for each team. If first game, fills since 1/1/2000."""
+
     def fit(self, X, y=None):
+        """Dummy for inheritance."""
         return self
 
-    def transform(self, X):
+    def transform(self, X: pd.DataFrame) -> pd.DataFrame:
+        """
+        Generates days since last game column.
+
+        Args:
+            X (pd.DataFrame): Input DataFrame.
+
+        Returns:
+            pd.DataFrame: Dataframe with imputed values.
+        """
         X_ = X.copy()
         df_home = X_[["start_date", "home_team"]].rename(columns={"home_team": "team"})
         df_away = X_[["start_date", "away_team"]].rename(columns={"away_team": "team"})
@@ -49,9 +61,28 @@ class DaysSinceLastGameTransformer(BaseEstimator, TransformerMixin):
 
 
 class RollingTransformer(BaseEstimator, TransformerMixin):
+    """Helper to generate a rolling version of a given column. Handles both home and away teams at the same time."""
+
     def __init__(
-        self, new_col, home_col, away_col, window_size, min_periods=1, agg_func="mean"
+        self,
+        new_col: str,
+        home_col: str,
+        away_col: str,
+        window_size: int,
+        min_periods: int = 1,
+        agg_func: str = "mean",
     ):
+        """
+        Initializes class to generate rolling column.
+
+        Args:
+            new_col (str): Name of the new column.
+            home_col (str): Data representing home team to roll.
+            away_col (str): Data representing away team to roll.
+            window_size (int): Window size to roll.
+            min_periods (int, optional): Minimum entries for a window if not enough data. Defaults to 1.
+            agg_func (str, optional): Function that aggregates window data. Defaults to "mean".
+        """
         self.new_col = new_col
         self.home_col = home_col
         self.away_col = away_col
@@ -60,10 +91,22 @@ class RollingTransformer(BaseEstimator, TransformerMixin):
         self.agg_func = agg_func
 
     def fit(self, X, y=None):
+        """Dummy for inheritance."""
         return self
 
-    def transform(self, X):
+    def transform(self, X: pd.DataFrame) -> pd.DataFrame:
+        """
+        Generates rolling column to DataFrame.
+
+        Args:
+            X (pd.DataFrame): Input DataFrame.
+
+        Returns:
+            pd.DataFrame: Dataframe with imputed values.
+        """
         X_ = X.copy()
+
+        # Separately treats home and away, combines into game_df
         home_df = X_[
             [
                 "start_date",
@@ -88,6 +131,7 @@ class RollingTransformer(BaseEstimator, TransformerMixin):
             subset=["start_date", "team"], keep="last", inplace=True
         )
 
+        # Create game_df rolling_column according to specs
         func_map = {
             "mean": lambda x: x.mean(),
             "sum": lambda x: x.sum(),
@@ -102,6 +146,8 @@ class RollingTransformer(BaseEstimator, TransformerMixin):
             .apply(func_map[self.agg_func], raw=True)
             .fillna(0)
         )
+
+        # Merge X_ with game_df, starting with home then away, retaining original index
         X_ = (
             X_.reset_index()
             .merge(
@@ -131,7 +177,13 @@ class RollingTransformer(BaseEstimator, TransformerMixin):
         return X_
 
 
-def offense_pipeline():
+def offense_pipeline() -> Pipeline:
+    """
+    Pipeline for all offensive features.
+
+    Returns:
+        Pipeline: Pipeline with offensive features.
+    """
     offense_pipeline = Pipeline(
         [
             (
@@ -151,7 +203,13 @@ def offense_pipeline():
     return offense_pipeline
 
 
-def defense_pipeline():
+def defense_pipeline() -> Pipeline:
+    """
+    Pipeline for all defensive features.
+
+    Returns:
+        Pipeline: Pipeline with defensive features.
+    """
     defense_pipeline = Pipeline(
         [
             (
@@ -171,7 +229,13 @@ def defense_pipeline():
     return defense_pipeline
 
 
-def feature_pipeline():
+def feature_pipeline() -> Pipeline:
+    """
+    Combines all types of features into one pipeline.
+
+    Returns:
+        Pipeline: Combined pipeline of features.
+    """
     pipeline = Pipeline(
         [
             ("days_since", DaysSinceLastGameTransformer()),
