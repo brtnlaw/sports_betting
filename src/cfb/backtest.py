@@ -20,9 +20,7 @@ warnings.simplefilter(action="ignore", category=FutureWarning)
 
 
 class RollingTimeSeriesSplit(BaseCrossValidator):
-    """
-    Custom rolling cross-validator that expands the training set season by season.
-    """
+    """Custom rolling cross-validator that expands the training set season by season."""
 
     def __init__(self, seasons, init_train_yrs=5):
         self.seasons = seasons

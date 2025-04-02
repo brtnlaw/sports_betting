@@ -1,11 +1,9 @@
-import datetime as dt
+from typing import Any, List
 
-import numpy as np
 import pandas as pd
 from sklearn import set_config
 from sklearn.base import BaseEstimator, TransformerMixin
 from sklearn.compose import ColumnTransformer
-from sklearn.impute import SimpleImputer
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import FunctionTransformer, OneHotEncoder
 
@@ -13,27 +11,64 @@ set_config(transform_output="pandas")
 
 
 class MultipleValueImputer(BaseEstimator, TransformerMixin):
-    def __init__(self, null_values, impute_val):
+    """Imputes multiple null values."""
+
+    def __init__(self, null_values: List[Any], impute_val: Any):
+        """
+        Initializes class with valid null values and desired imputed value.
+
+        Args:
+            null_values (List[Any]): List of possible null values.
+            impute_val (Any): Value to impute with.
+        """
         self.null_values = null_values
         self.impute_val = impute_val
 
     def fit(self, X, y=None):
+        """Dummy for inheritance."""
         return self
 
-    def transform(self, X):
+    def transform(self, X: pd.DataFrame) -> pd.DataFrame:
+        """
+        Imputes any of the null values.
+
+        Args:
+            X (pd.DataFrame): Input DataFrame.
+
+        Returns:
+            pd.DataFrame: Dataframe with imputed values.
+        """
         X_ = X.copy()
         X_.replace(self.null_values, self.impute_val, inplace=True)
         return X_
 
 
 class GroupMeanImputer(BaseEstimator, TransformerMixin):
-    def __init__(self, group_col):
+    """Mean imputes the columns of a DataFrame grouped upon one column."""
+
+    def __init__(self, group_col: str):
+        """
+        Initializes with grouping column.
+
+        Args:
+            group_col (str): Grouping column.
+        """
         self.group_col = group_col
 
     def fit(self, X, y=None):
+        """Dummy for inheritance."""
         return self
 
-    def transform(self, X):
+    def transform(self, X: pd.DataFrame) -> pd.DataFrame:
+        """
+        Mean imputes all columns of a DataFrame according to one column.
+
+        Args:
+            X (pd.DataFrame): Input DataFrame.
+
+        Returns:
+            pd.DataFrame: Dataframe with imputed values.
+        """
         X_ = X.copy()
         for col in X_.columns:
             if col != self.group_col:
@@ -47,13 +82,31 @@ class GroupMeanImputer(BaseEstimator, TransformerMixin):
 
 
 class GroupModeImputer(BaseEstimator, TransformerMixin):
-    def __init__(self, group_col):
+    """Mode imputes the columns of a DataFrame grouped upon one column."""
+
+    def __init__(self, group_col: str):
+        """
+        Initializes with grouping column.
+
+        Args:
+            group_col (str): Grouping column.
+        """
         self.group_col = group_col
 
     def fit(self, X, y=None):
-        return self  # No fitting needed, just transformation
+        """Dummy for inheritance."""
+        return self
 
-    def transform(self, X):
+    def transform(self, X: pd.DataFrame) -> pd.DataFrame:
+        """
+        Mode imputes all columns of a DataFrame according to one column.
+
+        Args:
+            X (pd.DataFrame): Input DataFrame.
+
+        Returns:
+            pd.DataFrame: Dataframe with imputed values.
+        """
         X_ = X.copy()
         for col in X_.columns:
             if col != self.group_col:
@@ -70,10 +123,22 @@ class GroupModeImputer(BaseEstimator, TransformerMixin):
 
 
 class QuartersTotalTransformer(BaseEstimator, TransformerMixin):
+    """Expands line_scores into quarter and total columns."""
+
     def fit(self, X, y=None):
+        """Dummy for inheritance."""
         return self
 
-    def transform(self, X):
+    def transform(self, X: pd.DataFrame) -> pd.DataFrame:
+        """
+        Expands the line_scores columns.
+
+        Args:
+            X (pd.DataFrame): Input DataFrame.
+
+        Returns:
+            pd.DataFrame: Dataframe with imputed values.
+        """
         X_ = X.copy()
         X_.dropna(subset=["home_line_scores"], inplace=True)
         X_ = X_[
@@ -103,7 +168,13 @@ class QuartersTotalTransformer(BaseEstimator, TransformerMixin):
         return X_
 
 
-def preprocess_pipeline():
+def preprocess_pipeline() -> Pipeline:
+    """
+    Generates the entire preprocessing pipeline.
+
+    Returns:
+        Pipeline: Preprocessing pipeline.
+    """
     col_transformers_1 = ColumnTransformer(
         transformers=[
             ("impute_attendance", GroupMeanImputer("venue"), ["venue", "attendance"]),
