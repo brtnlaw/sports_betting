@@ -13,10 +13,17 @@ class DataPrep:
     """
 
     def __init__(self, dataset="cfb"):
+        """
+        Initializes which data to load.
+
+        Args:
+            dataset (str, optional): The type of sport. Defaults to "cfb".
+        """
         self.dataset = dataset
         self.df = None
 
     def patch_errors(self):
+        """Patches any manual errors, i.e. wrong team entered by API. Not part of the data engineering."""
         patches_path = os.path.join(PROJECT_ROOT, f"src/cfb/data/patches/")
         if os.path.isdir(patches_path):
             for patch_file in os.listdir(patches_path):

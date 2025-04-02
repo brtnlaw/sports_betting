@@ -14,19 +14,17 @@ PROJECT_ROOT = os.getenv("PROJECT_ROOT", os.getcwd())
 
 
 class CFBVenueData:
-    """
-    Handles fetching, storing, and uploading CFB venue data. Also retrieves from PostgreSQL.
-    """
+    """Handles fetching, storing, and uploading CFB venue data. Also retrieves from PostgreSQL."""
 
     def __init__(self):
-        """
-        Loads the API keys, as well as configures the API connection to CFBD.
-        """
+        """Loads the API keys, as well as configures the API connection to CFBD."""
         load_dotenv()
 
         warnings.simplefilter(action="ignore", category=FutureWarning)
 
-        self._pkl_path = os.path.join(PROJECT_ROOT, f"src/cfb/data/pkl/venues.pkl")
+        self._pkl_path = os.path.join(
+            PROJECT_ROOT, f"src/cfb/data/pkl_files/venues.pkl"
+        )
         self.configuration = cfbd.Configuration(
             host="https://apinext.collegefootballdata.com",
             access_token=CFBD_API_KEY,

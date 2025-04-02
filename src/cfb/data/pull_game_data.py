@@ -14,14 +14,10 @@ PROJECT_ROOT = os.getenv("PROJECT_ROOT", os.getcwd())
 
 
 class CFBGameData:
-    """
-    Handles fetching, storing, and uploading CFB game data. Also retrieves from PostgreSQL.
-    """
+    """Handles fetching, storing, and uploading CFB game data. Also retrieves from PostgreSQL."""
 
     def __init__(self):
-        """
-        Loads the API keys, as well as configures the API connection to CFBD.
-        """
+        """Loads the API keys, as well as configures the API connection to CFBD."""
         load_dotenv()
         warnings.simplefilter(action="ignore", category=FutureWarning)
         self.configuration = cfbd.Configuration(
@@ -41,7 +37,7 @@ class CFBGameData:
         Returns:
             str: Path to pkl file.
         """
-        return os.path.join(PROJECT_ROOT, f"src/cfb/data/pkl/games_{year}.pkl")
+        return os.path.join(PROJECT_ROOT, f"src/cfb/data/pkl_files/games_{year}.pkl")
 
     def fetch_and_pickle_games_at_year(self, year: int) -> None:
         """

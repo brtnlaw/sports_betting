@@ -5,15 +5,11 @@ import warnings
 from typing import Callable
 
 import joblib
-import lightgbm as lgb
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import strategy.betting_logic as betting_logic
 from data.data_prep import DataPrep
-
-# TODO: FIX
-from model.train import train_model
 from pipeline import get_features_and_model_pipeline
 from preprocessing import preprocess_pipeline
 from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score

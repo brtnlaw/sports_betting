@@ -35,4 +35,9 @@ def simple_percentage(df):
     return df
 
 
+def kelly_criterion(df):
+    # kelly_size = p - (1-q)/b
+    pass
+
+
 # Brier Score

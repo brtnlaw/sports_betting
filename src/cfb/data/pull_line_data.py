@@ -16,14 +16,10 @@ PROJECT_ROOT = os.getenv("PROJECT_ROOT", os.getcwd())
 
 # TODO: This is only using major markets. Future work necessarily must involve derivative markets (i.e. NCAAF halves). We will use this as a starting point.
 class CFBLineData:
-    """
-    Handles fetching, storing, and uploading CFB game data. Also retrieves from PostgreSQL.
-    """
+    """Handles fetching, storing, and uploading CFB game data. Also retrieves from PostgreSQL."""
 
     def __init__(self):
-        """
-        Loads the API keys, as well as configures the API connection to CFBD.
-        """
+        """Loads the API keys, as well as configures the API connection to CFBD."""
         load_dotenv()
         warnings.simplefilter(action="ignore", category=FutureWarning)
         self.configuration = cfbd.Configuration(
@@ -43,7 +39,7 @@ class CFBLineData:
         Returns:
             str: Path to pkl file.
         """
-        return os.path.join(PROJECT_ROOT, f"src/cfb/data/pkl/lines_{year}.pkl")
+        return os.path.join(PROJECT_ROOT, f"src/cfb/data/pkl_files/lines_{year}.pkl")
 
     def fetch_and_pickle_lines_at_year(self, year: int) -> None:
         """
