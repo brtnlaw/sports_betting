@@ -28,6 +28,7 @@ def get_features_and_model_pipeline() -> Pipeline:
         "away_conference",
         "away_line_scores",
         "ot",
+        "excitement_index",
         # ------ Genned Columns ------
         "team_away",
         "previous_game",
@@ -62,7 +63,7 @@ def get_features_and_model_pipeline() -> Pipeline:
         steps=[
             ("features", features),
             ("drop_cols", drop_transformer),
-            ("light_gbm", LGBMRegressor()),
+            ("light_gbm", LGBMRegressor(verbose=-1)),
         ]
     )
     return pipeline

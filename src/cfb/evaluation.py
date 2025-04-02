@@ -1,0 +1,232 @@
+import os
+from typing import Callable, Union
+
+import joblib
+import lightgbm as lgb
+import matplotlib.pyplot as plt
+import pandas as pd
+from IPython.display import display
+from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
+from sklearn.pipeline import Pipeline
+from strategy import betting_logic
+
+PROJECT_ROOT = os.getenv("PROJECT_ROOT", os.getcwd())
+pd.set_option("future.no_silent_downcasting", True)
+
+
+def load_pkl_if_exists(
+    name_str: str,
+    target_str: str = "total",
+    betting_fnc: Callable = betting_logic.simple_percentage,
+    file_type: str = "df",
+) -> Union[Pipeline, pd.DataFrame]:
+    """
+    Helper function to load 'pipeline' or 'df' from a str.
+
+    Args:
+        name_str (str): Prefix of file string.
+        target_str (str, optional): For model, the target column. Defaults to "total".
+        betting_fnc (Callable, optional): Function to determine bets. Defaults to betting_logic.simple_percentage.
+        file_type (str, optional): Type of file to retrieve. Defaults to "df".
+
+    Raises:
+        Exception: Necessarily is a 'pipeline' or 'df' file.
+
+    Returns:
+        Any[Pipeline, pd.DataFrame]: Returns either a pipeline or DataFrame.
+    """
+    assert file_type in ["pipeline", "df"], "Pick a file_type in 'pipeline', 'df'"
+    if file_type == "pipeline":
+        file_path = os.path.join(
+            PROJECT_ROOT, f"src/cfb/models/{name_str}_{target_str}_pipeline.pkl"
+        )
+    else:
+        file_path = os.path.join(
+            PROJECT_ROOT,
+            f"src/cfb/models/{name_str}_{target_str}_{betting_fnc.__name__}.pkl",
+        )
+    if not os.path.exists(file_path):
+        raise Exception(f"No properly configured {file_type} file.")
+    result = joblib.load(file_path)
+    return result
+
+
+def plot_pnl(
+    model_str: str,
+    target_str: str = "total",
+    betting_fnc: Callable = betting_logic.simple_percentage,
+):
+    """
+    Plots the net unit pnl given a model.
+
+    Args:
+        model_str (str): Model prefix.
+        target_str (str, optional): For model, the target column. Defaults to "total".
+        betting_fnc (Callable, optional): Betting function. Defaults to betting_logic.simple_percentage.
+    """
+    model_df = load_pkl_if_exists(model_str, target_str, betting_fnc, "df")
+    model_df.fillna(0, inplace=True)
+    plot_model_df = model_df[model_df["unit_pnl"] != 0]
+    plot_model_df.reset_index(drop=True, inplace=True)
+
+    plt.plot(
+        plot_model_df["unit_pnl"].cumsum() + 100,
+        label=f"{model_str}_{target_str}_{betting_fnc.__name__}",
+    )
+    plt.xlabel("Games")
+    plt.ylabel("Total Units")
+    plt.title("Model Betting Strategy Performance")
+    plt.grid(True)
+    plt.legend()
+    plt.show()
+
+
+def plot_pnl_comparison(
+    model_str: str,
+    baseline_str: str = "model_4_2_25",
+    target_str: str = "total",
+    betting_fnc: Callable = betting_logic.simple_percentage,
+):
+    """
+    Plots the comparative net unit pnl given a model and a baseline.
+
+    Args:
+        model_str (str): Model prefix.
+        baseline_str (str): Baseline model prefix.
+        target_str (str, optional): For model, the target column. Defaults to "total".
+        betting_fnc (Callable, optional): Betting function. Defaults to betting_logic.simple_percentage.
+    """
+    plot_model_df = load_pkl_if_exists(model_str, target_str, betting_fnc, "df")
+    plot_baseline_df = load_pkl_if_exists(baseline_str, target_str, betting_fnc, "df")
+
+    plot_model_df.fillna(0, inplace=True)
+    plot_model_df = plot_model_df[plot_model_df["unit_pnl"] != 0]
+    plot_model_df.reset_index(drop=True, inplace=True)
+    plot_baseline_df.fillna(0, inplace=True)
+    plot_baseline_df = plot_baseline_df[plot_baseline_df["unit_pnl"] != 0]
+    plot_baseline_df.reset_index(drop=True, inplace=True)
+
+    plt.plot(
+        plot_model_df["unit_pnl"].cumsum() + 100,
+        label=f"{model_str}_{target_str}_{betting_fnc.__name__}",
+    )
+    plt.plot(
+        plot_baseline_df["unit_pnl"].cumsum() + 100,
+        label=f"{baseline_str}_{target_str}_{betting_fnc.__name__}",
+    )
+    plt.xlabel("Games")
+    plt.ylabel("Total Units")
+    plt.title("Betting Strategy Performance")
+    plt.grid(True)
+    plt.legend()
+    plt.show()
+
+
+def get_pred_metrics(
+    model_str: str,
+    target_str: str = "total",
+    betting_fnc: Callable = betting_logic.simple_percentage,
+) -> pd.DataFrame:
+    """
+    Creates a DataFrame with necessary betting and prediction metrics of the model.
+
+    Args:
+        model_str (str): Model prefix.
+        target_str (str, optional): Target column. Defaults to "total".
+        betting_fnc (Callable, optional): Betting function. Defaults to betting_logic.simple_percentage.
+
+    Returns:
+        pd.DataFrame: DataFrame with different model metrics.
+    """
+    model_df = load_pkl_if_exists(model_str, target_str, betting_fnc, "df")
+    model_df.dropna(inplace=True)
+    y = model_df[target_str].values
+    y_hat = model_df["pred"].values
+
+    mae = mean_absolute_error(y, y_hat)
+    mse = mean_squared_error(y, y_hat)
+    r2 = r2_score(y, y_hat)
+
+    bet_results = model_df["unit_pnl"].dropna()
+    total_units = bet_results.cumsum() + 100
+    sharpe = total_units.mean() / total_units.std()
+
+    net_pnl = bet_results.sum()
+    max_drawdown = min(bet_results.cumsum())
+    metrics = {
+        "Mean Average Error": mae,
+        "Mean Squared Error": mse,
+        "R-Squared": r2,
+        "Sharpe": sharpe,
+        "Net PNL": net_pnl,
+        "Max Drawdown": max_drawdown,
+    }
+    metric_df = pd.DataFrame(
+        metrics, index=[f"{model_str}_{target_str}_{betting_fnc.__name__}"]
+    )
+    metric_df.index.name = "model"
+    return metric_df
+
+
+def plot_model_metrics(
+    model_str: str,
+    baseline_str: str = None,
+    target_str: str = "total",
+) -> pd.DataFrame:
+    """
+    Plots feature importances.
+
+    Args:
+        model_str (str): Model prefix.
+        baseline_str (str, optional): If exists, plots comparison
+        target_str (str, optional): Target column. Defaults to "total".
+        betting_fnc (Callable, optional): Betting function. Defaults to betting_logic.simple_percentage.
+
+    Returns:
+        pd.DataFrame: DataFrame with different model metrics.
+    """
+    model_pipeline = load_pkl_if_exists(model_str, target_str, file_type="pipeline")
+    model = model_pipeline.named_steps["light_gbm"]
+    if baseline_str:
+        baseline_pipeline = load_pkl_if_exists(
+            baseline_str, target_str, file_type="pipeline"
+        )
+        baseline = baseline_pipeline.named_steps["light_gbm"]
+        _, axes = plt.subplots(1, 2, figsize=(14, 6))
+        lgb.plot_importance(
+            model, importance_type="gain", max_num_features=10, ax=axes[0]
+        )
+        axes[0].set_title(f"Feature Importance (Gain) - {model_str}")
+        lgb.plot_importance(
+            baseline, importance_type="gain", max_num_features=10, ax=axes[1]
+        )
+        axes[1].set_title(f"Feature Importance (Gain) - {baseline_str}")
+
+        axes[0].tick_params(axis="x", labelrotation=45)
+        axes[0].tick_params(axis="y", labelrotation=45)
+        axes[1].tick_params(axis="x", labelrotation=45)
+        axes[1].tick_params(axis="y", labelrotation=45)
+        plt.tight_layout()
+        plt.show()
+    else:
+        # If no baseline_str, just plot the feature importance for the main model
+        lgb.plot_importance(model, importance_type="gain", max_num_features=10)
+        plt.set_title(f"Feature Importance (Gain) - {model_str}")
+        plt.show()
+
+
+def compare_models(
+    model_str: str,
+    baseline_str: str = "model_4_2_25",
+    target_str: str = "total",
+    betting_fnc: Callable = betting_logic.simple_percentage,
+):
+    plot_pnl_comparison(model_str, baseline_str, target_str, betting_fnc)
+    metric_df = pd.concat(
+        [
+            get_pred_metrics(model_str, target_str, betting_fnc),
+            get_pred_metrics(baseline_str, target_str, betting_fnc),
+        ]
+    )
+    display(metric_df)
+    plot_model_metrics(model_str, baseline_str, target_str)
