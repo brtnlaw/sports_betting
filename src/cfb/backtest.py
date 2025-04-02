@@ -2,36 +2,105 @@ import datetime as dt
 import os
 import pickle as pkl
 import warnings
+from typing import Callable
 
+import joblib
 import lightgbm as lgb
 import matplotlib.pyplot as plt
+import numpy as np
 import pandas as pd
 import strategy.betting_logic as betting_logic
 from data.data_prep import DataPrep
 
 # TODO: FIX
 from model.train import train_model
+from pipeline import get_features_and_model_pipeline
+from preprocessing import preprocess_pipeline
 from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
+from sklearn.model_selection import BaseCrossValidator
+from sklearn.pipeline import Pipeline
 
 warnings.simplefilter(action="ignore", category=FutureWarning)
+
+
+class RollingTimeSeriesSplit(BaseCrossValidator):
+    """
+    Custom rolling cross-validator that expands the training set season by season.
+    """
+
+    def __init__(self, seasons, init_train_yrs=5):
+        self.seasons = seasons
+        self.init_train_yrs = init_train_yrs
+        self.unique_seasons = sorted(seasons.unique())
+
+    def split(self, X, y=None, groups=None):
+        """Yields indices for train-test splits."""
+        # TODO: Expand this to week by week instead of season by season. Am interested in how it learns throughout the season
+        for i in range(self.init_train_yrs, len(self.unique_seasons)):
+            train_seasons = self.unique_seasons[:i]
+            test_season = self.unique_seasons[i]
+
+            train_idx = np.where(self.seasons.isin(train_seasons))[0]
+            test_idx = np.where(self.seasons == test_season)[0]
+
+            yield train_idx, test_idx
+
+    def get_n_splits(self, X=None, y=None, groups=None):
+        """Returns the number of splits."""
+        return len(self.unique_seasons) - self.init_train_yrs
+
+
+def cross_validate(
+    X: pd.DataFrame,
+    y: pd.Series,
+    pipeline: Pipeline,
+    odds_df: pd.DataFrame,
+    betting_fnc: Callable = betting_logic.simple_percentage,
+    init_train_yrs: int = 5,
+    file_name: str = None,
+):
+    cv_split = RollingTimeSeriesSplit(
+        seasons=X["season"], init_train_yrs=init_train_yrs
+    )
+    for train_idx, test_idx in cv_split.split(X, y):
+        # Train-test split
+        X_train, y_train = X.iloc[train_idx], y.iloc[train_idx]
+        X_test = X.iloc[test_idx]
+        pipeline.fit(X_train, y_train)
+
+        # Get predictions
+        preds = pipeline.predict(X_test)
+        odds_df.iloc[test_idx, odds_df.columns.get_loc("pred")] = preds
+
+    odds_df = betting_fnc(odds_df)
+
+    # Save the entire pipeline
+    if not file_name:
+        td = dt.datetime.today()
+        file_name = f"model_{td.month}_{td.day}_{td.year%100}"
+    joblib.dump(pipeline, file_name)
+
+    # Save the odds_df with the betting fnc name
+    with open(
+        f"src/cfb/model/models/{file_name}_{betting_fnc.__name__}.pkl", "wb"
+    ) as f:
+        pkl.dump(odds_df, f)
+    return pipeline, odds_df
 
 
 def load_pkl_if_exists(
     name_str, betting_fnc=betting_logic.simple_percentage, file_type="df"
 ):
-    """Helper function to load 'model' or 'df' from a str."""
-    assert file_type in ["model", "df"], "Pick a file_type in 'model', 'df'"
-    if file_type == "model":
-        file_path = f"src/cfb/model/models/{name_str}.mdl"
-        if not os.path.exists(file_path):
-            raise Exception(f"No properly configured {file_type}.")
-        result = lgb.Booster(model_file=file_path)
+    """Helper function to load 'pipeline' or 'df' from a str."""
+    assert file_type in ["pipeline", "df"], "Pick a file_type in 'pipeline', 'df'"
+    if file_type == "pipeline":
+        file_path = f"src/cfb/model/models/{name_str}.pkl"
     else:
         file_path = f"src/cfb/model/models/{name_str}_{betting_fnc.__name__}.pkl"
-        if not os.path.exists(file_path):
-            raise Exception(f"No properly configured {file_type}.")
-        with open(file_path, "rb") as file:
-            result = pkl.load(file)
+    if not os.path.exists(file_path):
+        raise Exception(f"No properly configured {file_type} file.")
+    with open(file_path, "rb") as file:
+        result = pkl.load(file)
     return result
 
 
@@ -52,7 +121,7 @@ def plot_pnl(model_str, betting_fnc=betting_logic.simple_percentage):
 def plot_pnl_comparison(
     model_str, baseline_str="model_3_29_25", betting_fnc=betting_logic.simple_percentage
 ):
-    # TODO: Include target in model name.
+    # TODO: Include target column in model name.
     plot_model_df = load_pkl_if_exists(model_str, betting_fnc, "df")
     plot_baseline_df = load_pkl_if_exists(baseline_str, betting_fnc, "df")
 
@@ -77,44 +146,7 @@ def plot_pnl_comparison(
     plt.show()
 
 
-def cross_validate(
-    odds_df,
-    X,
-    y,
-    file_name=None,
-    betting_fnc=betting_logic.simple_percentage,
-    init_train_yrs=5,
-):
-    """Performs rolling cross-validation using past seasons to predict future ones."""
-    cv_year_indices = X.groupby("season").head(1).iloc[init_train_yrs:].index
-    cv_year_spots = [X.index.get_loc(idx) for idx in cv_year_indices] + [len(X)]
-
-    for i in range(len(cv_year_spots) - 1):
-        train_idx, test_idx = cv_year_spots[i], cv_year_spots[i + 1]
-
-        # Train-test split
-        X_train, y_train = X.iloc[:train_idx], y.iloc[:train_idx]
-        X_test = X.iloc[train_idx:test_idx]
-
-        # Train model & predict
-        model = train_model(X_train, y_train)
-        preds = model.predict(X_test)
-        odds_df.iloc[train_idx:test_idx, odds_df.columns.get_loc("pred")] = preds
-
-    # Apply betting logic & plot results
-    odds_df = betting_fnc(odds_df)
-    if not file_name:
-        td = dt.datetime.today()
-        file_name = f"model_{td.month}_{td.day}_{td.year%100}"
-    if model.__class__.__name__ == "Booster":
-        model.save_model(f"src/cfb/model/models/{file_name}.mdl")
-    with open(
-        f"src/cfb/model/models/{file_name}_{betting_fnc.__name__}.pkl", "wb"
-    ) as f:
-        pkl.dump(odds_df, f)
-    return model, odds_df
-
-
+# TODO: Below needs to be updated.
 def model_metrics(
     model_str,
     baseline_str="baseline_3_30_25",
@@ -174,25 +206,18 @@ if __name__ == "__main__":
     data_prep = DataPrep(dataset="cfb")
     raw_data = data_prep.get_data()
 
-    print("Step 2: Preprocessing data...")
-    preprocessor = Preprocessor(raw_data, "total")
-    odds_df, X, y = preprocessor.preprocess_data()
+    print("Step 2: Preprocess and separate odds, X, and y...")
+    preprocessed_data = preprocess_pipeline().fit_transform(raw_data)
+    target_col = "total"
+    betting_cols = ["min_ou", "max_ou"]
 
-    print("Step 3: Feature engineering...")
-    feature_pipeline = FeaturePipeline(X)
-    X = feature_pipeline.engineer_features()
+    odds_df = preprocessed_data[[target_col] + betting_cols]
+    odds_df["pred"] = None
+    X = preprocessed_data.drop(columns=[target_col])
+    y = preprocessed_data[target_col]
 
-    # 4. Train the Model
-    print("Step 4: Training and evaluating the model...")
-    model, df = cross_validate(odds_df, X, y)
-
-    # 5. Evaluate the Model
-    print("Step 5: Evaluating the model...")
-    model_metrics(model, df)
-
-
-"""
-df = pipeline[-1].fit_transform(raw_data)
-df.columns = df.columns.str.split('__', n=1).str[-1]"
-# Workflow is get raw_data, have one step to get the odds_df out (with prediction, etc.), then plug the whole thing into pipeline
-"""
+    print("Step 3: Training and evaluating the model...")
+    pipeline = get_features_and_model_pipeline()
+    model, odds_df = cross_validate(
+        X, y, pipeline, odds_df, betting_logic.simple_percentage
+    )

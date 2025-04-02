@@ -1,12 +1,11 @@
 import pandas as pd
+from lightgbm.sklearn import LGBMRegressor
 from pipelines.features import feature_pipeline
-from pipelines.preprocessing import preprocess_pipeline
 from sklearn.compose import ColumnTransformer
 from sklearn.pipeline import Pipeline
 
 
-def get_pipeline():
-    preprocess = preprocess_pipeline()
+def get_features_and_model_pipeline():
     features = feature_pipeline()
 
     columns_to_drop = [
@@ -18,10 +17,17 @@ def get_pipeline():
         "home_team",
         "away_team",
         "timezone",
+        "start_date",
+        "home_conference",
+        "home_line_scores",
+        "away_conference",
+        "away_line_scores",
         # ------ Genned Columns ------
         "team_away",
         "previous_game",
         # ------ Collinear Data ------
+        "home_points",
+        "away_points",
         "home_q1",
         "home_q2",
         "home_q3",
@@ -38,21 +44,20 @@ def get_pipeline():
         "away_ot",
         "ot",
     ]
-    betting_cols = ["min_ou", "max_ou"]
 
     drop_transformer = ColumnTransformer(
         transformers=[
             ("drop_columns", "drop", columns_to_drop),
-            ("drop_betting", "drop", betting_cols),
         ],
         remainder="passthrough",
         verbose_feature_names_out=False,
     )
+
     pipeline = Pipeline(
         steps=[
-            ("preprocessing", preprocess),
             ("features", features),
             ("drop_cols", drop_transformer),
+            ("light_gbm", LGBMRegressor()),
         ]
     )
     return pipeline

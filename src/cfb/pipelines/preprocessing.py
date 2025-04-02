@@ -1,13 +1,29 @@
 import datetime as dt
 
+import numpy as np
 import pandas as pd
 from sklearn import set_config
 from sklearn.base import BaseEstimator, TransformerMixin
 from sklearn.compose import ColumnTransformer
+from sklearn.impute import SimpleImputer
 from sklearn.pipeline import Pipeline
-from sklearn.preprocessing import OneHotEncoder
+from sklearn.preprocessing import FunctionTransformer, OneHotEncoder
 
 set_config(transform_output="pandas")
+
+
+class MultipleValueImputer(BaseEstimator, TransformerMixin):
+    def __init__(self, null_values, impute_val):
+        self.null_values = null_values
+        self.impute_val = impute_val
+
+    def fit(self, X, y=None):
+        return self
+
+    def transform(self, X):
+        X_ = X.copy()
+        X_.replace(self.null_values, self.impute_val, inplace=True)
+        return X_
 
 
 class GroupMeanImputer(BaseEstimator, TransformerMixin):
@@ -30,18 +46,26 @@ class GroupMeanImputer(BaseEstimator, TransformerMixin):
         return X_
 
 
-class RemoveNaNTransformer(BaseEstimator, TransformerMixin):
-    def __init__(self, columns=None):
-        self.columns = columns
+class GroupModeImputer(BaseEstimator, TransformerMixin):
+    def __init__(self, group_col):
+        self.group_col = group_col
 
     def fit(self, X, y=None):
-        return self
+        return self  # No fitting needed, just transformation
 
     def transform(self, X):
-        if self.columns is not None:
-            X_ = X.dropna(subset=self.columns).copy()
-        else:
-            X_ = X.dropna().copy()
+        X_ = X.copy()
+        for col in X_.columns:
+            if col != self.group_col:
+                mode_df = (
+                    X_.groupby(self.group_col)[col]
+                    .apply(lambda group: group.mode())
+                    .reset_index(level=0)
+                )
+                mode_dict = dict(zip(mode_df[self.group_col], mode_df[col]))
+                X_[col] = X_.apply(
+                    lambda row: mode_dict.get(row[self.group_col], row[col]), axis=1
+                )
         return X_
 
 
@@ -80,7 +104,7 @@ class QuartersTotalTransformer(BaseEstimator, TransformerMixin):
 
 
 def preprocess_pipeline():
-    col_transformers = ColumnTransformer(
+    col_transformers_1 = ColumnTransformer(
         transformers=[
             ("impute_attendance", GroupMeanImputer("venue"), ["venue", "attendance"]),
             (
@@ -94,9 +118,36 @@ def preprocess_pipeline():
                 ["away_team", "away_pregame_elo"],
             ),
             (
+                "impute_nan_grass_dome",
+                MultipleValueImputer([float("nan"), None], False),
+                ["dome", "grass"],
+            ),
+        ],
+        remainder="passthrough",
+        verbose_feature_names_out=False,
+    )
+    col_transformers_2 = ColumnTransformer(
+        transformers=[
+            (
+                "impute_conf_class_home",
+                GroupModeImputer("home_team"),
+                ["home_team", "home_conference", "home_classification"],
+            ),
+            (
+                "impute_conf_class_away",
+                GroupModeImputer("away_team"),
+                ["away_team", "away_conference", "away_classification"],
+            ),
+        ],
+        remainder="passthrough",
+        verbose_feature_names_out=False,
+    )
+    col_transformers_3 = ColumnTransformer(
+        transformers=[
+            (
                 "encode_classification",
                 OneHotEncoder(sparse_output=False),
-                ["home_classification", "away_classification"],
+                ["home_classification", "away_classification", "season_type"],
             ),
         ],
         remainder="passthrough",
@@ -105,11 +156,26 @@ def preprocess_pipeline():
 
     pipeline = Pipeline(
         [
-            ("imputation", col_transformers),
+            (
+                "set_id_index",
+                FunctionTransformer(
+                    lambda df: df.set_index("id"),
+                    validate=False,
+                ),
+            ),
+            # NOTE: The below is okay because we do this before we separate X and y.
             (
                 "remove_nans",
-                RemoveNaNTransformer(["home_line_scores", "away_line_scores"]),
+                FunctionTransformer(
+                    lambda df: df.dropna(
+                        subset=["home_line_scores", "away_line_scores"]
+                    ),
+                    validate=False,
+                ),
             ),
+            ("col_transformers_1", col_transformers_1),
+            ("col_transformers_2", col_transformers_2),
+            ("col_transformers_3", col_transformers_3),
             ("quarter_total", QuartersTotalTransformer()),
         ]
     )

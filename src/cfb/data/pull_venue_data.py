@@ -9,6 +9,9 @@ from dotenv import load_dotenv
 
 from db_utils import insert_data_to_db
 
+CFBD_API_KEY = os.getenv("CFBD_API_KEY")
+PROJECT_ROOT = os.getenv("PROJECT_ROOT", os.getcwd())
+
 
 class CFBVenueData:
     """
@@ -20,14 +23,13 @@ class CFBVenueData:
         Loads the API keys, as well as configures the API connection to CFBD.
         """
         load_dotenv()
-        self.cfbd_api_key = os.getenv("CFBD_API_KEY")
-        self.project_root = os.getenv("PROJECT_ROOT", os.getcwd())
+
         warnings.simplefilter(action="ignore", category=FutureWarning)
 
-        self._pkl_path = os.path.join(self.project_root, f"src/cfb/data/pkl/venues.pkl")
+        self._pkl_path = os.path.join(PROJECT_ROOT, f"src/cfb/data/pkl/venues.pkl")
         self.configuration = cfbd.Configuration(
             host="https://apinext.collegefootballdata.com",
-            access_token=self.cfbd_api_key,
+            access_token=CFBD_API_KEY,
         )
         self.api_client = cfbd.ApiClient(self.configuration)
         self.api = cfbd.VenuesApi(self.api_client)
