@@ -1,11 +1,16 @@
-import pandas as pd
 from lightgbm.sklearn import LGBMRegressor
 from pipelines.features import feature_pipeline
 from sklearn.compose import ColumnTransformer
 from sklearn.pipeline import Pipeline
 
 
-def get_features_and_model_pipeline():
+def get_features_and_model_pipeline() -> Pipeline:
+    """
+    Final composition that takes preprocessed data and feature engineers into a model.
+
+    Returns:
+        Pipeline: Composed feature engineering and model pipeline.
+    """
     features = feature_pipeline()
 
     columns_to_drop = [
@@ -22,6 +27,7 @@ def get_features_and_model_pipeline():
         "home_line_scores",
         "away_conference",
         "away_line_scores",
+        "ot",
         # ------ Genned Columns ------
         "team_away",
         "previous_game",
@@ -42,7 +48,6 @@ def get_features_and_model_pipeline():
         "away_h1",
         "away_h2",
         "away_ot",
-        "ot",
     ]
 
     drop_transformer = ColumnTransformer(
