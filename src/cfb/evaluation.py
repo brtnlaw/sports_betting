@@ -153,6 +153,7 @@ def get_pred_metrics(
 
     net_pnl = bet_results.sum()
     max_drawdown = min(bet_results.cumsum())
+    percent_winning = (bet_results > 0).sum() / len(bet_results)
     metrics = {
         "Mean Average Error": mae,
         "Mean Squared Error": mse,
@@ -160,6 +161,7 @@ def get_pred_metrics(
         "Sharpe": sharpe,
         "Net PNL": net_pnl,
         "Max Drawdown": max_drawdown,
+        "Winning Bet %": percent_winning,
     }
     metric_df = pd.DataFrame(
         metrics, index=[f"{model_str}_{target_str}_{betting_fnc.__name__}"]

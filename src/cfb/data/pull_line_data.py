@@ -58,11 +58,20 @@ class CFBLineData:
             lines = self.api.get_lines(year=year)
             with open(path, "wb") as f:
                 pkl.dump(lines, f)
-            print(f"Successfully pickled to {path}")
+            print(f"Successfully pickled to {path}.")
         except ApiException as e:
-            print("Error fetching lines for {year}: {e}")
+            print(f"Error fetching lines for {year}: {e}")
 
-    def _bg_expand_to_df(self, bg: BettingGame):
+    def _bg_expand_to_df(self, bg: BettingGame) -> pd.DataFrame:
+        """
+        Expands BettingGame to a DataFrame.
+
+        Args:
+            bg (BettingGame): Input BettingGame object.
+
+        Returns:
+            pd.DataFrame: BettingGame object as DataFrame.
+        """
         bg_dict = pd.DataFrame(bg.dict())
         expanded_lines = pd.json_normalize(bg_dict["lines"])
         return pd.concat([bg_dict.drop("lines", axis=1), expanded_lines], axis=1)

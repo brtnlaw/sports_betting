@@ -49,6 +49,8 @@ def get_features_and_model_pipeline() -> Pipeline:
         "away_h1",
         "away_h2",
         "away_ot",
+        "home_postgame_win_probability",
+        "away_postgame_win_probability",
     ]
 
     drop_transformer = ColumnTransformer(

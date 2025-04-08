@@ -1,3 +1,4 @@
+import argparse
 import datetime as dt
 import os
 import warnings
@@ -105,7 +106,16 @@ def cross_validate(
 
 
 if __name__ == "__main__":
-    # python src/cfb/backtest.py
+    """
+    Example usage:
+    python src/cfb/backtest.py
+    python src/cfb/backtest.py --name "baseline"
+    """
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--name", type=str, help="Model file name to save.")
+    args = parser.parse_args()
+
     print("Step 1: Loading data...")
     data_prep = DataPrep(dataset="cfb")
     raw_data = data_prep.get_data()
@@ -122,6 +132,10 @@ if __name__ == "__main__":
 
     print("Step 3: Training and evaluating the model...")
     pipeline = get_features_and_model_pipeline()
+    cross_val_kwargs = {}
+    if args.name is not None:
+        cross_val_kwargs["file_name"] = args.name
+
     model, odds_df = cross_validate(
-        X, y, pipeline, odds_df, betting_logic.simple_percentage
+        X, y, pipeline, odds_df, betting_logic.simple_percentage, **cross_val_kwargs
     )

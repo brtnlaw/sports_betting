@@ -1,0 +1,25 @@
+CREATE TABLE
+    IF NOT EXISTS cfb.lines (
+        id INT,
+        season INT,
+        season_type VARCHAR(30),
+        week INT,
+        start_date DATE,
+        home_team VARCHAR(50),
+        home_conference VARCHAR(50),
+        home_classification VARCHAR(50),
+        home_score INT,
+        away_team VARCHAR(50),
+        away_conference VARCHAR(50),
+        away_classification VARCHAR(50),
+        away_score INT,
+        provider VARCHAR(50),
+        spread DECIMAL(4, 1),
+        formatted_spread VARCHAR(50),
+        spread_open DECIMAL(4, 1),
+        over_under DECIMAL(4, 1),
+        over_under_open DECIMAL(4, 1),
+        home_moneyline DECIMAL(7, 1),
+        away_moneyline DECIMAL(7, 1),
+        FOREIGN KEY (id) REFERENCES cfb.games (id) ON DELETE SET NULL
+    );

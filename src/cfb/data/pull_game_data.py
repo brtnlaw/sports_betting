@@ -28,6 +28,7 @@ class CFBGameData:
         self.api = cfbd.GamesApi(self.api_client)
 
     def _get_pkl_path(self, year: int) -> str:
+        # NOTE: The 2020 season uniquely had a week 20.
         """
         Returns file path to pkl for a given year.
 
@@ -56,9 +57,9 @@ class CFBGameData:
             games = self.api.get_games(year=year)
             with open(path, "wb") as f:
                 pkl.dump(games, f)
-            print(f"Successfully pickled to {path}")
+            print(f"Successfully pickled to {path}.")
         except ApiException as e:
-            print("Error fetching games for {year}: {e}")
+            print(f"Error fetching games for {year}: {e}")
 
     def load_games_from_pkl_at_year(self, year: int) -> pd.DataFrame:
         """

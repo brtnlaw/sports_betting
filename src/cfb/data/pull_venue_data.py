@@ -45,9 +45,9 @@ class CFBVenueData:
             venues = self.api.get_venues()
             with open(self._pkl_path, "wb") as f:
                 pkl.dump(venues, f)
-            print(f"Successfully pickled to {self._pkl_path}")
+            print(f"Successfully pickled to {self._pkl_path}.")
         except ApiException as e:
-            print("Error fetching venues: {e}")
+            print(f"Error fetching venues: {e}")
 
     def load_venues_from_pkl(self) -> pd.DataFrame:
         """
