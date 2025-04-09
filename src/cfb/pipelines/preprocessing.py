@@ -168,6 +168,59 @@ class QuartersTotalTransformer(BaseEstimator, TransformerMixin):
         return X_
 
 
+# Probably do a separate for percentages. That way can impute first.
+class ExpandEfficiencyTransformer(BaseEstimator, TransformerMixin):
+    """Expands efficiency columns into attempts, successes, and percentages. Hardcodes to simplify naming"""
+
+    def fit(self, X, y=None):
+        """Dummy for inheritance."""
+        return self
+
+    def transform(self, X: pd.DataFrame) -> pd.DataFrame:
+        X_ = X.copy()
+        sides = ["home", "away"]
+        for side in sides:
+            # 3rd down
+            X_[[f"{side}_third_down_successes", f"{side}_third_down_attempts"]] = (
+                X_[f"{side}_third_down_eff"]
+                .where(X_[f"{side}_third_down_eff"].str.contains(r"^\d+-\d+$"))
+                .str.split("-", expand=True)
+                .astype(float)
+            )
+            # X_[f"{side}_third_down_pct"] = (
+            #     X_[f"{side}_third_down_successes"] / X_[f"{side}_third_down_attempts"]
+            # )
+
+            # 4th down
+            X_[[f"{side}_fourth_down_successes", f"{side}_fourth_down_attempts"]] = (
+                X_[f"{side}_fourth_down_eff"]
+                .where(X_[f"{side}_fourth_down_eff"].str.contains(r"^\d+-\d+$"))
+                .str.split("-", expand=True)
+                .astype(float)
+            )
+            # X_[f"{side}_fourth_down_pct"] = (
+            #     X_[f"{side}_fourth_down_successes"] / X_[f"{side}_fourth_down_attempts"]
+            # )
+
+            # Passing attempts
+            X_[[f"{side}_receptions", f"{side}_passes"]] = (
+                X_[f"{side}_completion_attempts"]
+                .where(X_[f"{side}_completion_attempts"].str.contains(r"^\d+-\d+$"))
+                .str.split("-", expand=True)
+                .astype(float)
+            )
+            # X_[f"{side}_pass_pct"] = X_[f"{side}_receptions"] / X_[f"{side}_passes"]
+
+            # Penalties
+            X_[[f"{side}_penalties", f"{side}_penalty_yds"]] = (
+                X_[f"{side}_total_penalties_yards"]
+                .where(X_[f"{side}_total_penalties_yards"].str.contains(r"^\d+-\d+$"))
+                .str.split("-", expand=True)
+                .astype(float)
+            )
+        return X_
+
+
 def preprocess_pipeline() -> Pipeline:
     """
     Generates the entire preprocessing pipeline.
@@ -248,6 +301,7 @@ def preprocess_pipeline() -> Pipeline:
             ("col_transformers_2", col_transformers_2),
             ("col_transformers_3", col_transformers_3),
             ("quarter_total", QuartersTotalTransformer()),
+            ("expand_efficiency", ExpandEfficiencyTransformer()),
         ]
     )
     return pipeline

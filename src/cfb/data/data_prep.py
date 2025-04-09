@@ -51,6 +51,7 @@ class DataPrep:
         game_df = retrieve_data(self.dataset, "games")
         venue_df = retrieve_data(self.dataset, "venues")
         line_df = retrieve_data(self.dataset, "lines")
+        game_team_stat_df = retrieve_data(self.dataset, "game_team_stats")
 
         # Merge game and venue data on venue_id
         self.df = pd.merge(
@@ -67,8 +68,24 @@ class DataPrep:
         ou_df.columns = ["min_ou", "max_ou"]
         self.df = pd.merge(self.df, ou_df, how="left", on="id")
 
+        # Merge box score data
+        home_gts = game_team_stat_df.add_prefix("home_")
+        away_gts = game_team_stat_df.add_prefix("away_")
+        self.df = self.df.merge(
+            home_gts,
+            how="left",
+            left_on=["id", "home_id", "home_team"],
+            right_on=["home_game_id", "home_team_id", "home_team"],
+        )
+        self.df = self.df.merge(
+            away_gts,
+            how="left",
+            left_on=["id", "away_id", "away_team"],
+            right_on=["away_game_id", "away_team_id", "away_team"],
+        )
+
     def remove_columns(self):
-        """Remove unnecessary columns to simplify the dataset."""
+        """Remove truly unnecessary columns to simplify the dataset."""
         useless_cols = [
             "start_time_tbd",
             "completed",

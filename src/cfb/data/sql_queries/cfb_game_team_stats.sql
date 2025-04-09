@@ -30,5 +30,7 @@ CREATE TABLE
         yards_per_rush_attempt FLOAT NULL,
         punt_return_tds INT NULL,
         punt_return_yards INT NULL,
-        punt_returns INT NULL
+        punt_returns INT NULL,
+        PRIMARY KEY (game_id, team_id),
+        FOREIGN KEY (game_id) REFERENCES cfb.games(id) ON DELETE SET NULL
     );

@@ -198,6 +198,50 @@ def offense_pipeline() -> Pipeline:
                     "points_for", "home_points", "away_points", 5, 1, "mean"
                 ),
             ),
+            (
+                "rolling_third_down_attempts_3",
+                RollingTransformer(
+                    "third_down_attempts",
+                    "home_third_down_attempts",
+                    "away_third_down_attempts",
+                    3,
+                    1,
+                    "mean",
+                ),
+            ),
+            (
+                "rolling_third_down_successes_3",
+                RollingTransformer(
+                    "third_down_successes",
+                    "home_third_down_successes",
+                    "away_third_down_successes",
+                    3,
+                    1,
+                    "mean",
+                ),
+            ),
+            (
+                "rolling_fourth_down_attempts_3",
+                RollingTransformer(
+                    "fourth_down_attempts",
+                    "home_fourth_down_attempts",
+                    "away_fourth_down_attempts",
+                    3,
+                    1,
+                    "mean",
+                ),
+            ),
+            (
+                "rolling_fourthdown_successes_3",
+                RollingTransformer(
+                    "fourth_down_successes",
+                    "home_fourth_down_successes",
+                    "away_fourth_down_successes",
+                    3,
+                    1,
+                    "mean",
+                ),
+            ),
         ]
     )
     return offense_pipeline

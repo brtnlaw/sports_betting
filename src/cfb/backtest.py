@@ -139,3 +139,5 @@ if __name__ == "__main__":
     model, odds_df = cross_validate(
         X, y, pipeline, odds_df, betting_logic.simple_percentage, **cross_val_kwargs
     )
+
+    print("Success!")
