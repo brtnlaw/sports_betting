@@ -187,12 +187,6 @@ def offense_pipeline() -> Pipeline:
     offense_pipeline = Pipeline(
         [
             (
-                "rolling_offense_3",
-                RollingTransformer(
-                    "points_for", "home_points", "away_points", 3, 1, "mean"
-                ),
-            ),
-            (
                 "rolling_offense_5",
                 RollingTransformer(
                     "points_for", "home_points", "away_points", 5, 1, "mean"
@@ -237,6 +231,39 @@ def offense_pipeline() -> Pipeline:
                     "fourth_down_successes",
                     "home_fourth_down_successes",
                     "away_fourth_down_successes",
+                    3,
+                    1,
+                    "mean",
+                ),
+            ),
+            (
+                "rolling_passing_yds_for_3",
+                RollingTransformer(
+                    "passing_yds_for",
+                    "home_net_passing_yards",
+                    "away_net_passing_yards",
+                    3,
+                    1,
+                    "mean",
+                ),
+            ),
+            (
+                "rolling_ints_3",
+                RollingTransformer(
+                    "ints",
+                    "home_interceptions",
+                    "away_interceptions",
+                    3,
+                    1,
+                    "mean",
+                ),
+            ),
+            (
+                "rolling_rushing_yds_for_3",
+                RollingTransformer(
+                    "rushing_yds_for",
+                    "home_rushing_yards",
+                    "away_rushing_yards",
                     3,
                     1,
                     "mean",

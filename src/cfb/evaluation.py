@@ -154,6 +154,8 @@ def get_pred_metrics(
     net_pnl = bet_results.sum()
     max_drawdown = min(bet_results.cumsum())
     percent_winning = (bet_results > 0).sum() / len(bet_results)
+    num_bets = (bet_results != 0).sum()
+
     metrics = {
         "Mean Average Error": mae,
         "Mean Squared Error": mse,
@@ -161,6 +163,7 @@ def get_pred_metrics(
         "Sharpe": sharpe,
         "Net PNL": net_pnl,
         "Max Drawdown": max_drawdown,
+        "Number of Bets": num_bets,
         "Winning Bet %": percent_winning,
     }
     metric_df = pd.DataFrame(
@@ -213,7 +216,7 @@ def plot_model_metrics(
     else:
         # If no baseline_str, just plot the feature importance for the main model
         lgb.plot_importance(model, importance_type="gain", max_num_features=10)
-        plt.set_title(f"Feature Importance (Gain) - {model_str}")
+        plt.title(f"Feature Importance (Gain) - {model_str}")
         plt.show()
 
 

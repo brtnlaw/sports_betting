@@ -29,6 +29,9 @@ def get_features_and_model_pipeline() -> Pipeline:
         "away_line_scores",
         "ot",
         "excitement_index",
+        "constructionyear",
+        "elevation",
+        "capacity",
         # ------ Genned Columns ------
         "team_away",
         "previous_game",
@@ -54,7 +57,7 @@ def get_features_and_model_pipeline() -> Pipeline:
         # ------ Future Looking Data ------
         "home_game_id",
         "home_team_id",
-        "home_completion_attempts",
+        "home_completion_attempts",  # Not an int
         "home_first_downs",
         "home_fourth_down_eff",
         "home_fumbles_lost",
@@ -142,7 +145,7 @@ def get_features_and_model_pipeline() -> Pipeline:
         steps=[
             ("features", features),
             ("drop_cols", drop_transformer),
-            ("light_gbm", LGBMRegressor(verbose=-1)),
+            ("light_gbm", LGBMRegressor(verbose=-1, reg_lambda=0.5, reg_alpha=0.5)),
         ]
     )
     return pipeline
