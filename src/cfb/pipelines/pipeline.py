@@ -1,6 +1,7 @@
 from lightgbm.sklearn import LGBMRegressor
 from pipelines.features import feature_pipeline
 from sklearn.compose import ColumnTransformer
+from sklearn.feature_selection import SelectKBest, VarianceThreshold
 from sklearn.pipeline import Pipeline
 
 
@@ -54,6 +55,8 @@ def get_features_and_model_pipeline() -> Pipeline:
         "away_ot",
         "home_postgame_win_probability",
         "away_postgame_win_probability",
+        "home_postgame_elo",
+        "away_postgame_elo",
         # ------ Future Looking Data ------
         "home_game_id",
         "home_team_id",
@@ -145,6 +148,8 @@ def get_features_and_model_pipeline() -> Pipeline:
         steps=[
             ("features", features),
             ("drop_cols", drop_transformer),
+            ("variance_threshold", VarianceThreshold()),
+            ("select_features", SelectKBest(k=5)),
             ("light_gbm", LGBMRegressor(verbose=-1, reg_lambda=0.5, reg_alpha=0.5)),
         ]
     )

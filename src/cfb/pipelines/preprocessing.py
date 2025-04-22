@@ -187,9 +187,6 @@ class ExpandEfficiencyTransformer(BaseEstimator, TransformerMixin):
                 .str.split("-", expand=True)
                 .astype(float)
             )
-            # X_[f"{side}_third_down_pct"] = (
-            #     X_[f"{side}_third_down_successes"] / X_[f"{side}_third_down_attempts"]
-            # )
 
             # 4th down
             X_[[f"{side}_fourth_down_successes", f"{side}_fourth_down_attempts"]] = (
@@ -198,9 +195,6 @@ class ExpandEfficiencyTransformer(BaseEstimator, TransformerMixin):
                 .str.split("-", expand=True)
                 .astype(float)
             )
-            # X_[f"{side}_fourth_down_pct"] = (
-            #     X_[f"{side}_fourth_down_successes"] / X_[f"{side}_fourth_down_attempts"]
-            # )
 
             # Passing attempts
             X_[[f"{side}_receptions", f"{side}_passes"]] = (
@@ -209,7 +203,6 @@ class ExpandEfficiencyTransformer(BaseEstimator, TransformerMixin):
                 .str.split("-", expand=True)
                 .astype(float)
             )
-            # X_[f"{side}_pass_pct"] = X_[f"{side}_receptions"] / X_[f"{side}_passes"]
 
             # Penalties
             X_[[f"{side}_penalties", f"{side}_penalty_yds"]] = (
@@ -221,7 +214,7 @@ class ExpandEfficiencyTransformer(BaseEstimator, TransformerMixin):
         return X_
 
 
-def preprocess_pipeline() -> Pipeline:
+def get_preprocess_pipeline() -> Pipeline:
     """
     Generates the entire preprocessing pipeline.
 

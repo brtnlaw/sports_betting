@@ -248,9 +248,9 @@ def offense_pipeline() -> Pipeline:
                 ),
             ),
             (
-                "rolling_ints_3",
+                "rolling_ints_thrown_3",
                 RollingTransformer(
-                    "ints",
+                    "ints_thrown",
                     "home_interceptions",
                     "away_interceptions",
                     3,
@@ -269,6 +269,28 @@ def offense_pipeline() -> Pipeline:
                     "mean",
                 ),
             ),
+            # (
+            #     "rolling_passing_tds_3",
+            #     RollingTransformer(
+            #         "passing_tds",
+            #         "home_passing_tds",
+            #         "away_passing_tds",
+            #         3,
+            #         1,
+            #         "mean",
+            #     ),
+            # ),
+            # (
+            #     "rolling_rushing_tds_3",
+            #     RollingTransformer(
+            #         "rushing_tds",
+            #         "home_rushing_tds",
+            #         "away_rushing_tds",
+            #         3,
+            #         1,
+            #         "mean",
+            #     ),
+            # ),
         ]
     )
     return offense_pipeline

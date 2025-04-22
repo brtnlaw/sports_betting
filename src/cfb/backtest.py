@@ -1,5 +1,6 @@
 import argparse
 import datetime as dt
+import importlib
 import os
 import warnings
 from typing import Callable
@@ -10,7 +11,7 @@ import pandas as pd
 import strategy.betting_logic as betting_logic
 from data.data_prep import DataPrep
 from pipelines.pipeline import get_features_and_model_pipeline
-from pipelines.preprocessing import preprocess_pipeline
+from pipelines.preprocessing import get_preprocess_pipeline
 from sklearn.model_selection import BaseCrossValidator
 from sklearn.pipeline import Pipeline
 
@@ -49,7 +50,7 @@ def cross_validate(
     y: pd.Series,
     pipeline: Pipeline,
     odds_df: pd.DataFrame,
-    betting_fnc: Callable = betting_logic.simple_percentage,
+    betting_fnc: Callable = betting_logic.simple_stellage,
     fixed_window_length: int = 5,
     file_name: str = None,
 ) -> tuple[Pipeline, pd.DataFrame]:
@@ -73,6 +74,8 @@ def cross_validate(
     cv_split = RollingTimeSeriesSplit(
         seasons=X["season"], fixed_window_length=fixed_window_length
     )
+    contrib_df_list = []
+
     for train_idx, test_idx in cv_split.split(X, y):
         # Train-test split
         X_train, y_train = X.iloc[train_idx], y.iloc[train_idx]
@@ -80,9 +83,14 @@ def cross_validate(
         pipeline.fit(X_train, y_train)
 
         # Get predictions
-        preds = pipeline.predict(X_test)
-        odds_df.iloc[test_idx, odds_df.columns.get_loc("pred")] = preds
+        preds = pipeline.predict(X_test, pred_contrib=True)
+        cols = pipeline.named_steps["light_gbm"].feature_name_ + ["bias"]
+        contrib_df_list.append(
+            pd.DataFrame(preds[:, :], columns=cols, index=X_test.index)
+        )
+        odds_df.iloc[test_idx, odds_df.columns.get_loc("pred")] = preds.sum(axis=1)
 
+    contrib_df = pd.concat(contrib_df_list).sort_index()
     odds_df = betting_fnc(odds_df)
 
     # Save the entire pipeline
@@ -94,6 +102,10 @@ def cross_validate(
     joblib.dump(
         pipeline,
         os.path.join(PROJECT_ROOT, f"src/cfb/models/{file_name}_{y.name}_pipeline.pkl"),
+    )
+    joblib.dump(
+        contrib_df,
+        os.path.join(PROJECT_ROOT, f"src/cfb/models/{file_name}_{y.name}_contrib.pkl"),
     )
     joblib.dump(
         odds_df,
@@ -110,10 +122,12 @@ if __name__ == "__main__":
     Example usage:
     python src/cfb/backtest.py
     python src/cfb/backtest.py --name "baseline"
+    python src/cfb/backtest.py --name "baseline" --betting_fnc "simple_stellage"
     """
 
     parser = argparse.ArgumentParser()
     parser.add_argument("--name", type=str, help="Model file name to save.")
+    parser.add_argument("--betting_fnc", type=str, help="Betting function to apply.")
     args = parser.parse_args()
 
     print("Step 1: Loading data...")
@@ -121,7 +135,7 @@ if __name__ == "__main__":
     raw_data = data_prep.get_data()
 
     print("Step 2: Preprocess and separate odds, X, and y...")
-    preprocessed_data = preprocess_pipeline().fit_transform(raw_data)
+    preprocessed_data = get_preprocess_pipeline().fit_transform(raw_data)
     target_col = "total"
     betting_cols = ["min_ou", "max_ou"]
 
@@ -133,11 +147,12 @@ if __name__ == "__main__":
     print("Step 3: Training and evaluating the model...")
     pipeline = get_features_and_model_pipeline()
     cross_val_kwargs = {}
+    if args.betting_fnc is not None:
+        module = importlib.import_module("strategy.betting_logic")
+        cross_val_kwargs["betting_fnc"] = getattr(module, args.betting_fnc)
     if args.name is not None:
         cross_val_kwargs["file_name"] = args.name
 
-    model, odds_df = cross_validate(
-        X, y, pipeline, odds_df, betting_logic.simple_percentage, **cross_val_kwargs
-    )
+    model, odds_df = cross_validate(X, y, pipeline, odds_df, **cross_val_kwargs)
 
     print("Success!")
