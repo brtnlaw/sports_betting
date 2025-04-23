@@ -1,7 +1,13 @@
 from lightgbm.sklearn import LGBMRegressor
+from pipelines.feature_transformers.print_transformer import PrintTransformer
 from pipelines.features import feature_pipeline
 from sklearn.compose import ColumnTransformer
-from sklearn.feature_selection import RFECV, SelectKBest, VarianceThreshold
+from sklearn.feature_selection import (
+    RFECV,
+    SelectKBest,
+    SequentialFeatureSelector,
+    VarianceThreshold,
+)
 from sklearn.pipeline import Pipeline
 
 
@@ -144,21 +150,32 @@ def get_features_and_model_pipeline() -> Pipeline:
         verbose_feature_names_out=False,
     )
 
-    lgbm_params = {"verbose": -1, "reg_lambda": 0.5, "reg_alpha": 0.5}
+    lgbm_params = {"verbose": -1, "reg_lambda": 1, "reg_alpha": 1}
     pipeline = Pipeline(
         steps=[
             ("features", features),
             ("drop_cols", drop_transformer),
             ("variance_threshold", VarianceThreshold()),
+            ("print_rfecv", PrintTransformer("Starting RFECV...")),
+            # TODO: Decide on a best form of feature selection...
             (
                 "recurs_feature_elimination_cv",
-                RFECV(
+                # RFECV(
+                #     LGBMRegressor(**lgbm_params),
+                #     min_features_to_select=5,
+                #     step=10,
+                #     scoring="r2",
+                # ),
+                SequentialFeatureSelector(
                     LGBMRegressor(**lgbm_params),
-                    min_features_to_select=5,
-                    step=3,
+                    n_features_to_select=5,  # or a float like 0.5 for % of total
+                    direction="forward",  # explicitly say "forward"
                     scoring="r2",
+                    cv=5,
+                    n_jobs=-1,
                 ),
             ),
+            ("print_fit", PrintTransformer("Fitting model...")),
             ("light_gbm", LGBMRegressor(**lgbm_params)),
         ]
     )

@@ -60,7 +60,7 @@ def load_pkl_if_exists(
     return result
 
 
-def group_features(model_str: str) -> pd.DataFrame:
+def get_group_features(model_str: str) -> pd.DataFrame:
     """
     Generates a contrib_df grouped by offense and defensive totals
 
@@ -106,6 +106,15 @@ def group_features(model_str: str) -> pd.DataFrame:
         ]
         .abs()
         .sum(axis=1)
+    )
+    model_contrib_df["abs_contrib_total"] = model_contrib_df[
+        ["offense_total", "defense_total"]
+    ].sum(axis=1)
+    model_contrib_df["offense_pct"] = (
+        model_contrib_df["offense_total"] / model_contrib_df["abs_contrib_total"]
+    )
+    model_contrib_df["defense_pct"] = (
+        model_contrib_df["defense_total"] / model_contrib_df["abs_contrib_total"]
     )
     return model_contrib_df
 
