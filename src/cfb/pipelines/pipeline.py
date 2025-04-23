@@ -1,7 +1,7 @@
 from lightgbm.sklearn import LGBMRegressor
 from pipelines.features import feature_pipeline
 from sklearn.compose import ColumnTransformer
-from sklearn.feature_selection import SelectKBest, VarianceThreshold
+from sklearn.feature_selection import RFECV, SelectKBest, VarianceThreshold
 from sklearn.pipeline import Pipeline
 
 
@@ -144,13 +144,22 @@ def get_features_and_model_pipeline() -> Pipeline:
         verbose_feature_names_out=False,
     )
 
+    lgbm_params = {"verbose": -1, "reg_lambda": 0.5, "reg_alpha": 0.5}
     pipeline = Pipeline(
         steps=[
             ("features", features),
             ("drop_cols", drop_transformer),
             ("variance_threshold", VarianceThreshold()),
-            ("select_features", SelectKBest(k=5)),
-            ("light_gbm", LGBMRegressor(verbose=-1, reg_lambda=0.5, reg_alpha=0.5)),
+            (
+                "recurs_feature_elimination_cv",
+                RFECV(
+                    LGBMRegressor(**lgbm_params),
+                    min_features_to_select=5,
+                    step=3,
+                    scoring="r2",
+                ),
+            ),
+            ("light_gbm", LGBMRegressor(**lgbm_params)),
         ]
     )
     return pipeline

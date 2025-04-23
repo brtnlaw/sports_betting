@@ -18,10 +18,10 @@ def load_pkl_if_exists(
     name_str: str,
     target_str: str = "total",
     betting_fnc: Callable = betting_logic.simple_percentage,
-    file_type: str = "df",
+    file_type: str = "odds_df",
 ) -> Union[Pipeline, pd.DataFrame]:
     """
-    Helper function to load 'pipeline' or 'df' from a str.
+    Helper function to load 'pipeline', 'contrib_df', or 'odds_df' from a str.
 
     Args:
         name_str (str): Prefix of file string.
@@ -58,6 +58,56 @@ def load_pkl_if_exists(
         raise Exception(f"No properly configured {file_type} file.")
     result = joblib.load(file_path)
     return result
+
+
+def group_features(model_str: str) -> pd.DataFrame:
+    """
+    Generates a contrib_df grouped by offense and defensive totals
+
+    Args:
+        model_str (str): String of the desired model.
+
+    Returns:
+        pd.DataFrame: Contrib_df with grouped metrics.
+    """
+    offense_roots = [
+        "points_for",
+        "third_down_attempts",
+        "third_down_successes",
+        "fourth_down_attempts",
+        "fourth_down_successes",
+        "passing_yds_for",
+        "ints_thrown",
+        "rushing_yds_for",
+        "passing_tds",
+        "rushing_tds",
+    ]
+    defense_roots = ["points_against", "passing_yds_given_up"]
+
+    model_contrib_df = load_pkl_if_exists(model_str, file_type="contrib_df")
+    model_contrib_df["offense_total"] = (
+        model_contrib_df[
+            [
+                col
+                for col in model_contrib_df.columns
+                if any(col.endswith(root) for root in offense_roots)
+            ]
+        ]
+        .abs()
+        .sum(axis=1)
+    )
+    model_contrib_df["defense_total"] = (
+        model_contrib_df[
+            [
+                col
+                for col in model_contrib_df.columns
+                if any(col.endswith(root) for root in defense_roots)
+            ]
+        ]
+        .abs()
+        .sum(axis=1)
+    )
+    return model_contrib_df
 
 
 def plot_pnl(
