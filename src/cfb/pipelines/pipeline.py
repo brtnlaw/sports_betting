@@ -2,12 +2,7 @@ from lightgbm.sklearn import LGBMRegressor
 from pipelines.feature_transformers.print_transformer import PrintTransformer
 from pipelines.features import feature_pipeline
 from sklearn.compose import ColumnTransformer
-from sklearn.feature_selection import (
-    RFECV,
-    SelectKBest,
-    SequentialFeatureSelector,
-    VarianceThreshold,
-)
+from sklearn.feature_selection import RFECV, VarianceThreshold
 from sklearn.pipeline import Pipeline
 
 
@@ -157,26 +152,17 @@ def get_features_and_model_pipeline() -> Pipeline:
             ("drop_cols", drop_transformer),
             ("variance_threshold", VarianceThreshold()),
             ("print_rfecv", PrintTransformer("Starting RFECV...")),
-            # TODO: Decide on a best form of feature selection...
             (
                 "recurs_feature_elimination_cv",
-                # RFECV(
-                #     LGBMRegressor(**lgbm_params),
-                #     min_features_to_select=5,
-                #     step=10,
-                #     scoring="r2",
-                # ),
-                SequentialFeatureSelector(
+                RFECV(
                     LGBMRegressor(**lgbm_params),
-                    n_features_to_select=5,  # or a float like 0.5 for % of total
-                    direction="forward",  # explicitly say "forward"
-                    scoring="r2",
-                    cv=5,
-                    n_jobs=-1,
+                    min_features_to_select=5,
+                    step=10,
+                    scoring="neg_mean_squared_error",
                 ),
             ),
             ("print_fit", PrintTransformer("Fitting model...")),
-            ("light_gbm", LGBMRegressor(**lgbm_params)),
+            ("light_gbm_regressor", LGBMRegressor(**lgbm_params)),
         ]
     )
     return pipeline
