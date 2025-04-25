@@ -1,5 +1,5 @@
 import os
-from typing import Callable, Tuple, Union
+from typing import Tuple, Union
 
 import joblib
 import lightgbm as lgb
@@ -25,7 +25,7 @@ def load_pkl_if_exists(
     Args:
         name_str (str): Prefix of file string.
         target_str (str, optional): For model, the target column. Defaults to "total".
-        betting_fnc (str, optional): Function to determine bets. Defaults to "spread_probs.
+        betting_fnc (str, optional): Function to determine bets. Defaults to "spread_probs".
         file_type (str, optional): Type of file to retrieve. Defaults to "df".
 
     Raises:
@@ -70,7 +70,7 @@ def get_group_features(
     Args:
         model_str (str): String of the desired model.
         target_str (str, optional): For model, the target column. Defaults to "home_away_spread".
-        betting_fnc (str, optional): Function to determine bets. Defaults to "spread_probs.
+        betting_fnc (str, optional): Function to determine bets. Defaults to "spread_probs".
 
     Returns:
         pd.DataFrame: Contrib_df with grouped metrics.
@@ -120,7 +120,7 @@ def plot_pnl(
     Args:
         model_str (str): Model prefix.
         target_str (str, optional): For model, the target column. Defaults to "total".
-        betting_fnc (str, optional): Function to determine bets. Defaults to "spread_probs.
+        betting_fnc (str, optional): Function to determine bets. Defaults to "spread_probs".
     """
     model_df = load_pkl_if_exists(model_str, target_str, betting_fnc, "odds_df")
     model_df.fillna(0, inplace=True)
@@ -195,7 +195,7 @@ def get_pred_metrics(
     Args:
         model_str (str): Model prefix.
         target_str (str, optional): Target column. Defaults to "total".
-        betting_fnc (str, optional): Function to determine bets. Defaults to "spread_probs.
+        betting_fnc (str, optional): Function to determine bets. Defaults to "spread_probs".
 
     Returns:
         pd.DataFrame: DataFrame with different model metrics.
@@ -245,7 +245,7 @@ def plot_model_metrics(
 
     Args:
         model_str (str): Model prefix.
-        baseline_str (str, optional): If exists, plots comparison
+        baseline_str (str, optional): If exists, plots comparison to baseline.
         target_str (str, optional): Target column. Defaults to "total".
 
     Returns:

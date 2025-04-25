@@ -6,9 +6,14 @@ from db_utils import retrieve_data
 
 
 class BettingLogic:
+    SPREAD_SD = 22
+    COND_SPREAD_SD = 15
+
     def __init__(self, betting_fnc: str = "spread_cond_betting"):
         self.betting_fnc = betting_fnc
         self.spread_cover_probs = self._initialize_cond_probs()
+        self.spread_sd = self.SPREAD_SD
+        self.cond_spread_sd = self.COND_SPREAD_SD
 
     def _apply_edge(
         self,
@@ -41,12 +46,11 @@ class BettingLogic:
         # Hard-coded, better results with a slightly larger sd
         historical_spread_range = np.arange(-60, 61)
         historical_spread_lines_range = np.arange(-40, 41)
-        spread_sd = 22
-        cond_spread_sd = 15
 
+        # Attain difference in football scores w/ Gaussian normal
         gauss_probs = norm.cdf(
-            historical_spread_range + 0.5, loc=0, scale=spread_sd
-        ) - norm.cdf(historical_spread_range - 0.5, loc=0, scale=spread_sd)
+            historical_spread_range + 0.5, loc=0, scale=self.spread_sd
+        ) - norm.cdf(historical_spread_range - 0.5, loc=0, scale=self.spread_sd)
         gauss_probs = pd.Series(gauss_probs, index=historical_spread_range, name="norm")
 
         mult_df = pd.concat([hist_pcts, gauss_probs], axis=1)
@@ -55,9 +59,11 @@ class BettingLogic:
         # Every column is the PMF of N(mu, 15), where mu is the spreads line
         cdf_dict = {
             line: norm.cdf(
-                historical_spread_range + 0.5, loc=line, scale=cond_spread_sd
+                historical_spread_range + 0.5, loc=line, scale=self.cond_spread_sd
             )
-            - norm.cdf(historical_spread_range - 0.5, loc=line, scale=cond_spread_sd)
+            - norm.cdf(
+                historical_spread_range - 0.5, loc=line, scale=self.cond_spread_sd
+            )
             for line in historical_spread_lines_range
         }
         cond_df = pd.DataFrame(cdf_dict, index=historical_spread_range)
@@ -66,9 +72,6 @@ class BettingLogic:
         cond_df = cond_df.mul(mult_df["mult"], axis=0)
         for col in cond_df:
             cond_df[col] = cond_df[col] / (cond_df[col].sum())
-
-        # Probability of a given line to cover
-        # cover_probs = cond_df.apply(lambda col: col[col.index < col.name].sum(), axis=0)
         return cond_df
 
     def _get_weighted_cover_prob(self, our_line: int, book_line: int):
@@ -92,8 +95,6 @@ class BettingLogic:
         book_upper_wt = book_line - book_lower
         book_lower_wt = book_upper - book_line
 
-        # assume flat numbers for ease. Then we want to take OUR guess (let's say we have 8 point favs vs 7 for line)
-        # get the prob of getting above 7 IE what are the odds that our bet hits? we need >= 52.4%
         prob_cover = our_upper_wt * (
             book_upper_wt
             * self.spread_cover_probs.loc[

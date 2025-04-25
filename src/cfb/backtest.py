@@ -49,7 +49,6 @@ def cross_validate(
     y: pd.Series,
     pipeline: Pipeline,
     odds_df: pd.DataFrame,
-    # betting_fnc: Callable = betting_logic.simple_stellage,
     betting_fnc: str = "spread_probs",
     fixed_window_length: int = 5,
     file_name: str = None,
@@ -64,8 +63,7 @@ def cross_validate(
         y (pd.Series): Target Series.
         pipeline (Pipeline): Feature and model pipeline.
         odds_df (pd.DataFrame): DataFrame of betting lines and results.
-        # TODO: edit
-        betting_fnc (Callable, optional): Function to allocate bets. Defaults to betting_logic.simple_percentage.
+        betting_fnc (str, optional): Function to determine bets. Defaults to "spread_probs".
         fixed_window_length (int, optional): Seasons to train on. Defaults to 5.
         file_name (str, optional): Desired file name for model. Defaults to None.
 
@@ -124,7 +122,7 @@ if __name__ == "__main__":
     Example usage:
     python src/cfb/backtest.py
     python src/cfb/backtest.py --name "baseline"
-    python src/cfb/backtest.py --name "baseline" --betting_fnc "simple_stellage"
+    python src/cfb/backtest.py --name "baseline" --betting_fnc "spread_probs"
     """
 
     parser = argparse.ArgumentParser()
@@ -159,6 +157,8 @@ if __name__ == "__main__":
     cross_val_kwargs = {}
     if args.name is not None:
         cross_val_kwargs["file_name"] = args.name
+    if args.betting_fnc is not None:
+        cross_val_kwargs["betting_fnc"] = args.betting_fnc
 
     model, odds_df = cross_validate(X, y, pipeline, odds_df, **cross_val_kwargs)
 

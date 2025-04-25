@@ -5,13 +5,14 @@
 - [ ] Potential helper function to get the transformed df right before model
 - [ ] Number of features
 - [ ] Function that takes a betting strategy and odds_df of existing, makes a new betting strategy odds_df
+- [ ] Show book hit %, etc.
 
 ## Ideas
 - "Explosiveness"
 - Smarter elo system
 - Minimizing logloss by experimenting with Classification rather than Regression
 - Separate into Offense, Defense, QB, Special Teams, Neutral
-- Experiment with some new markets (spreads? See: https://arxiv.org/pdf/2212.08116)
+
 
 ## Done
 - [x] Variable betting size based on opportunity (stellage)
@@ -20,3 +21,4 @@
 - [x] Test out RFECV
 - [x] Given contributions from each column, harken back to the grouping
 - [x] Kalman 
+- [x] Experiment with some new markets (spreads? See: https://arxiv.org/pdf/2212.08116)
