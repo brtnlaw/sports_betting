@@ -5,7 +5,6 @@
 - [ ] Potential helper function to get the transformed df right before model
 - [ ] Number of features
 - [ ] Function that takes a betting strategy and odds_df of existing, makes a new betting strategy odds_df
-- [ ] Show book hit %, etc.
 
 ## Ideas
 - "Explosiveness"
@@ -19,6 +18,3 @@
 - [x] Allow argsparser to use betting function
 - [x] Test out SelectKBest for feature selection
 - [x] Test out RFECV
-- [x] Given contributions from each column, harken back to the grouping
-- [x] Kalman 
-- [x] Experiment with some new markets (spreads? See: https://arxiv.org/pdf/2212.08116)
