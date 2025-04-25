@@ -153,7 +153,6 @@ def get_features_and_model_pipeline() -> Pipeline:
             ("features", features),
             ("drop_cols", drop_transformer),
             ("variance_threshold", VarianceThreshold()),
-            ("print_rfecv", PrintTransformer("Starting RFECV...")),
             (
                 "recurs_feature_elimination_cv",
                 RFECV(
@@ -163,7 +162,6 @@ def get_features_and_model_pipeline() -> Pipeline:
                     scoring="neg_mean_squared_error",
                 ),
             ),
-            ("print_fit", PrintTransformer("Fitting model...")),
             ("light_gbm", LGBMRegressor(**lgbm_params)),
         ]
     )

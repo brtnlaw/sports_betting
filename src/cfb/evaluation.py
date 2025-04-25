@@ -111,7 +111,7 @@ def get_group_features(
 
 def plot_pnl(
     model_str: str,
-    target_str: str = "total",
+    target_str: str = "home_away_spread",
     betting_fnc: str = "spread_probs",
 ):
     """
@@ -119,7 +119,7 @@ def plot_pnl(
 
     Args:
         model_str (str): Model prefix.
-        target_str (str, optional): For model, the target column. Defaults to "total".
+        target_str (str, optional): For model, the target column. Defaults to "home_away_spread".
         betting_fnc (str, optional): Function to determine bets. Defaults to "spread_probs".
     """
     model_df = load_pkl_if_exists(model_str, target_str, betting_fnc, "odds_df")
@@ -141,8 +141,8 @@ def plot_pnl(
 
 def plot_pnl_comparison(
     model_str: str,
-    baseline_str: str = "model_4_2_25",
-    target_str: str = "total",
+    baseline_str: str = "baseline",
+    target_str: str = "home_away_spread",
     betting_fncs: Tuple[str] = ("spread_probs", "spread_probs"),
 ):
     """
@@ -151,7 +151,7 @@ def plot_pnl_comparison(
     Args:
         model_str (str): Model prefix.
         baseline_str (str): Baseline model prefix.
-        target_str (str, optional): For model, the target column. Defaults to "total".
+        target_str (str, optional): For model, the target column. Defaults to "home_away_spread".
         betting_fncs (Tuple[str], optional): Betting functions. Defaults to "spread_probs" for both.
     """
     plot_model_df = load_pkl_if_exists(
@@ -186,7 +186,7 @@ def plot_pnl_comparison(
 
 def get_pred_metrics(
     model_str: str,
-    target_str: str = "total",
+    target_str: str = "home_away_spread",
     betting_fnc: str = "spread_probs",
     is_book: bool = False,
     betting_cols: Tuple[str] = ("min_spread", "max_spread"),
@@ -196,11 +196,13 @@ def get_pred_metrics(
 
     Args:
         model_str (str): Model prefix.
-        target_str (str, optional): Target column. Defaults to "total".
+        target_str (str, optional): Target column. Defaults to "home_away_spread".
         betting_fnc (str, optional): Function to determine bets. Defaults to "spread_probs".
+        is_book (bool, optional): Whether or not the book stats are desired. Defaults to False.
+        betting_cols (Tuple[str], optional): If wanting the book stats, need the book columns. Defaults to ("min_spread", "max_spread").
 
     Returns:
-        pd.DataFrame: DataFrame with different model metrics.
+        pd.DataFrame: DataFrame with different model metrics. Includes the book metrics.
     """
     model_df = load_pkl_if_exists(model_str, target_str, betting_fnc, "odds_df")
     if is_book:
@@ -249,7 +251,7 @@ def get_pred_metrics(
 def plot_model_metrics(
     model_str: str,
     baseline_str: str = None,
-    target_str: str = "total",
+    target_str: str = "home_away_spread",
 ) -> pd.DataFrame:
     """
     Plots feature importances.
@@ -257,7 +259,7 @@ def plot_model_metrics(
     Args:
         model_str (str): Model prefix.
         baseline_str (str, optional): If exists, plots comparison to baseline.
-        target_str (str, optional): Target column. Defaults to "total".
+        target_str (str, optional): Target column. Defaults to "home_away_spread".
 
     Returns:
         pd.DataFrame: DataFrame with different model metrics.
@@ -294,11 +296,21 @@ def plot_model_metrics(
 
 def compare_models(
     model_str: str,
-    baseline_str: str = "model_4_2_25",
-    target_str: str = "total",
+    baseline_str: str = "baseline",
+    target_str: str = "home_away_spread",
     betting_fncs: Tuple[str] = ("spread_probs", "spread_probs"),
     betting_cols: Tuple[str] = ("min_spread", "max_spread"),
 ):
+    """
+    Compare two models and gives the full suite of metrics.
+
+    Args:
+        model_str (str): Model prefix.
+        target_str (str, optional): Target column. Defaults to "home_away_spread".
+        betting_fnc (str, optional): Function to determine bets. Defaults to "spread_probs".
+        betting_fncs (Tuple[str], optional): _description_. Defaults to ("spread_probs", "spread_probs").
+        betting_cols (Tuple[str], optional): _description_. Defaults to ("min_spread", "max_spread").
+    """
     plot_pnl_comparison(model_str, baseline_str, target_str, betting_fncs)
     metric_df = pd.concat(
         [

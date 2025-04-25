@@ -1,239 +1,19 @@
-from typing import Any, List
-
-import pandas as pd
+from pipelines.feature_transformers.expand_efficiency_transformer import (
+    ExpandEfficiencyTransformer,
+)
+from pipelines.feature_transformers.group_mean_imputer import GroupMeanImputer
+from pipelines.feature_transformers.group_mode_imputer import GroupModeImputer
+from pipelines.feature_transformers.multiple_value_imputer import MultipleValueImputer
+from pipelines.feature_transformers.quarters_total_transformer import (
+    QuartersTotalTransformer,
+)
+from pipelines.feature_transformers.spread_transformer import SpreadTransformer
 from sklearn import set_config
-from sklearn.base import BaseEstimator, TransformerMixin
 from sklearn.compose import ColumnTransformer
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import FunctionTransformer, OneHotEncoder
 
 set_config(transform_output="pandas")
-
-
-class MultipleValueImputer(BaseEstimator, TransformerMixin):
-    """Imputes multiple null values."""
-
-    def __init__(self, null_values: List[Any], impute_val: Any):
-        """
-        Initializes class with valid null values and desired imputed value.
-
-        Args:
-            null_values (List[Any]): List of possible null values.
-            impute_val (Any): Value to impute with.
-        """
-        self.null_values = null_values
-        self.impute_val = impute_val
-
-    def fit(self, X, y=None):
-        """Dummy for inheritance."""
-        return self
-
-    def transform(self, X: pd.DataFrame) -> pd.DataFrame:
-        """
-        Imputes any of the null values.
-
-        Args:
-            X (pd.DataFrame): Input DataFrame.
-
-        Returns:
-            pd.DataFrame: Dataframe with imputed values.
-        """
-        X_ = X.copy()
-        X_.replace(self.null_values, self.impute_val, inplace=True)
-        return X_
-
-
-class GroupMeanImputer(BaseEstimator, TransformerMixin):
-    """Mean imputes the columns of a DataFrame grouped upon one column."""
-
-    def __init__(self, group_col: str):
-        """
-        Initializes with grouping column.
-
-        Args:
-            group_col (str): Grouping column.
-        """
-        self.group_col = group_col
-
-    def fit(self, X, y=None):
-        """Dummy for inheritance."""
-        return self
-
-    def transform(self, X: pd.DataFrame) -> pd.DataFrame:
-        """
-        Mean imputes all columns of a DataFrame according to one column.
-
-        Args:
-            X (pd.DataFrame): Input DataFrame.
-
-        Returns:
-            pd.DataFrame: Dataframe with imputed values.
-        """
-        X_ = X.copy()
-        for col in X_.columns:
-            if col != self.group_col:
-                # Gets the mean by group
-                X_.loc[(X_[col].isna()) & X_[self.group_col].notna(), col] = X_[
-                    self.group_col
-                ].map(X_.groupby(self.group_col)[col].mean())
-                # Fills in the rest if not available
-                X_[col] = X_[col].fillna(X_[col].mean())
-        return X_
-
-
-class GroupModeImputer(BaseEstimator, TransformerMixin):
-    """Mode imputes the columns of a DataFrame grouped upon one column."""
-
-    def __init__(self, group_col: str):
-        """
-        Initializes with grouping column.
-
-        Args:
-            group_col (str): Grouping column.
-        """
-        self.group_col = group_col
-
-    def fit(self, X, y=None):
-        """Dummy for inheritance."""
-        return self
-
-    def transform(self, X: pd.DataFrame) -> pd.DataFrame:
-        """
-        Mode imputes all columns of a DataFrame according to one column.
-
-        Args:
-            X (pd.DataFrame): Input DataFrame.
-
-        Returns:
-            pd.DataFrame: Dataframe with imputed values.
-        """
-        X_ = X.copy()
-        for col in X_.columns:
-            if col != self.group_col:
-                mode_df = (
-                    X_.groupby(self.group_col)[col]
-                    .apply(lambda group: group.mode())
-                    .reset_index(level=0)
-                )
-                mode_dict = dict(zip(mode_df[self.group_col], mode_df[col]))
-                X_[col] = X_.apply(
-                    lambda row: mode_dict.get(row[self.group_col], row[col]), axis=1
-                )
-        return X_
-
-
-class SpreadTransformer(BaseEstimator, TransformerMixin):
-    """Adds point spread."""
-
-    def fit(self, X, y=None):
-        """Dummy for inheritance."""
-        return self
-
-    def transform(self, X: pd.DataFrame) -> pd.DataFrame:
-        """
-        Expands the line_scores columns.
-
-        Args:
-            X (pd.DataFrame): Input DataFrame.
-
-        Returns:
-            pd.DataFrame: Dataframe with imputed values.
-        """
-        X_ = X.copy()
-        X_["home_away_spread"] = X_["away_points"] - X_["home_points"]
-        return X_
-
-
-class QuartersTotalTransformer(BaseEstimator, TransformerMixin):
-    """Expands line_scores into quarter and total columns."""
-
-    def fit(self, X, y=None):
-        """Dummy for inheritance."""
-        return self
-
-    def transform(self, X: pd.DataFrame) -> pd.DataFrame:
-        """
-        Expands the line_scores columns.
-
-        Args:
-            X (pd.DataFrame): Input DataFrame.
-
-        Returns:
-            pd.DataFrame: Dataframe with imputed values.
-        """
-        X_ = X.copy()
-        X_.dropna(subset=["home_line_scores"], inplace=True)
-        X_ = X_[
-            X_["home_line_scores"].apply(lambda x: len(x) >= 4)
-            & X_["away_line_scores"].apply(lambda x: len(x) >= 4)
-        ]
-        X_["ot"] = X_["home_line_scores"].apply(lambda x: int(len(x) > 4))
-
-        for prefix in ["home", "away"]:
-            line_score = f"{prefix}_line_scores"
-            X_[line_score] = X_[line_score].apply(
-                lambda x: x[:4] + [sum(x[5:])] if len(x) >= 5 else x + [0]
-            )
-            X_[
-                [
-                    f"{prefix}_q1",
-                    f"{prefix}_q2",
-                    f"{prefix}_q3",
-                    f"{prefix}_q4",
-                    f"{prefix}_ot",
-                ]
-            ] = pd.DataFrame(X_[line_score].tolist(), index=X_.index)
-
-            X_[f"{prefix}_h1"] = X_[f"{prefix}_q1"] + X_[f"{prefix}_q2"]
-            X_[f"{prefix}_h2"] = X_[f"{prefix}_q3"] + X_[f"{prefix}_q4"]
-        X_["total"] = X_["home_points"] + X_["away_points"]
-        return X_
-
-
-# Probably do a separate for percentages. That way can impute first.
-class ExpandEfficiencyTransformer(BaseEstimator, TransformerMixin):
-    """Expands efficiency columns into attempts, successes, and percentages. Hardcodes to simplify naming"""
-
-    def fit(self, X, y=None):
-        """Dummy for inheritance."""
-        return self
-
-    def transform(self, X: pd.DataFrame) -> pd.DataFrame:
-        X_ = X.copy()
-        sides = ["home", "away"]
-        for side in sides:
-            # 3rd down
-            X_[[f"{side}_third_down_successes", f"{side}_third_down_attempts"]] = (
-                X_[f"{side}_third_down_eff"]
-                .where(X_[f"{side}_third_down_eff"].str.contains(r"^\d+-\d+$"))
-                .str.split("-", expand=True)
-                .astype(float)
-            )
-
-            # 4th down
-            X_[[f"{side}_fourth_down_successes", f"{side}_fourth_down_attempts"]] = (
-                X_[f"{side}_fourth_down_eff"]
-                .where(X_[f"{side}_fourth_down_eff"].str.contains(r"^\d+-\d+$"))
-                .str.split("-", expand=True)
-                .astype(float)
-            )
-
-            # Passing attempts
-            X_[[f"{side}_receptions", f"{side}_passes"]] = (
-                X_[f"{side}_completion_attempts"]
-                .where(X_[f"{side}_completion_attempts"].str.contains(r"^\d+-\d+$"))
-                .str.split("-", expand=True)
-                .astype(float)
-            )
-
-            # Penalties
-            X_[[f"{side}_penalties", f"{side}_penalty_yds"]] = (
-                X_[f"{side}_total_penalties_yards"]
-                .where(X_[f"{side}_total_penalties_yards"].str.contains(r"^\d+-\d+$"))
-                .str.split("-", expand=True)
-                .astype(float)
-            )
-        return X_
 
 
 def get_preprocess_pipeline() -> Pipeline:
@@ -245,7 +25,11 @@ def get_preprocess_pipeline() -> Pipeline:
     """
     col_transformers_1 = ColumnTransformer(
         transformers=[
-            ("impute_attendance", GroupMeanImputer("venue"), ["venue", "attendance"]),
+            (
+                "impute_attendance",
+                GroupMeanImputer("venue"),
+                ["venue", "attendance"],
+            ),
             (
                 "impute_home_elo",
                 GroupMeanImputer("home_team"),

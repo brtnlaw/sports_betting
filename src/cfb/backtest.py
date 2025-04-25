@@ -1,6 +1,5 @@
 import argparse
 import datetime as dt
-import importlib
 import os
 import warnings
 
@@ -23,15 +22,22 @@ PROJECT_ROOT = os.getenv("PROJECT_ROOT", os.getcwd())
 class RollingTimeSeriesSplit(BaseCrossValidator):
     """Custom rolling cross-validator that rolls over the training window by season, to avoid model drift."""
 
-    def __init__(self, seasons, fixed_window_length=5):
+    def __init__(self, seasons: pd.Series, fixed_window_size: int = 5):
+        """
+        Initializes seasons Series and window size.
+
+        Args:
+            seasons (pd.Series): Seasons Series with corresponding index.
+            fixed_window_length (int, optional): Number of seasons in rolling window. Defaults to 5.
+        """
         self.seasons = seasons
-        self.fixed_window_length = fixed_window_length
+        self.fixed_window_size = fixed_window_size
         self.unique_seasons = sorted(seasons.unique())
 
     def split(self, X, y=None, groups=None):
         """Yields indices for train-test splits."""
-        for i in range(self.fixed_window_length, len(self.unique_seasons)):
-            train_seasons = self.unique_seasons[i - self.fixed_window_length : i]
+        for i in range(self.fixed_window_size, len(self.unique_seasons)):
+            train_seasons = self.unique_seasons[i - self.fixed_window_size : i]
             test_season = self.unique_seasons[i]
 
             train_idx = np.where(self.seasons.isin(train_seasons))[0]
@@ -41,7 +47,7 @@ class RollingTimeSeriesSplit(BaseCrossValidator):
 
     def get_n_splits(self, X=None, y=None, groups=None):
         """Returns the number of splits."""
-        return len(self.unique_seasons) - self.fixed_window_length
+        return len(self.unique_seasons) - self.fixed_window_size
 
 
 def cross_validate(
