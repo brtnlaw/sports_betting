@@ -122,6 +122,28 @@ class GroupModeImputer(BaseEstimator, TransformerMixin):
         return X_
 
 
+class SpreadTransformer(BaseEstimator, TransformerMixin):
+    """Adds point spread."""
+
+    def fit(self, X, y=None):
+        """Dummy for inheritance."""
+        return self
+
+    def transform(self, X: pd.DataFrame) -> pd.DataFrame:
+        """
+        Expands the line_scores columns.
+
+        Args:
+            X (pd.DataFrame): Input DataFrame.
+
+        Returns:
+            pd.DataFrame: Dataframe with imputed values.
+        """
+        X_ = X.copy()
+        X_["home_away_spread"] = X_["away_points"] - X_["home_points"]
+        return X_
+
+
 class QuartersTotalTransformer(BaseEstimator, TransformerMixin):
     """Expands line_scores into quarter and total columns."""
 
@@ -294,6 +316,7 @@ def get_preprocess_pipeline() -> Pipeline:
             ("col_transformers_2", col_transformers_2),
             ("col_transformers_3", col_transformers_3),
             ("quarter_total", QuartersTotalTransformer()),
+            ("spread", SpreadTransformer()),
             ("expand_efficiency", ExpandEfficiencyTransformer()),
         ]
     )

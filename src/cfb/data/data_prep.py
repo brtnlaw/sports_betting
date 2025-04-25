@@ -64,9 +64,11 @@ class DataPrep:
         )
 
         # Merge betting odds
-        ou_df = line_df.groupby("id")["over_under"].agg(["min", "max"])
-        ou_df.columns = ["min_ou", "max_ou"]
-        self.df = pd.merge(self.df, ou_df, how="left", on="id")
+        bet_df = line_df.groupby("id").agg(
+            {"over_under": ["min", "max"], "spread": ["min", "max"]}
+        )
+        bet_df.columns = ["min_ou", "max_ou", "min_spread", "max_spread"]
+        self.df = pd.merge(self.df, bet_df, how="left", on="id")
 
         # Merge box score data
         home_gts = game_team_stat_df.add_prefix("home_")

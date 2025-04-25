@@ -1,58 +1,153 @@
-# Util files with different ways to bet for ease of testing
+import numpy as np
+import pandas as pd
+from scipy.stats import norm
+
+from db_utils import retrieve_data
 
 
-def _apply_edge(
-    df, condition, success_condition, failure_condition, units, payout=0.87
-):
-    # TODO: replace with actual lines.
-    df.loc[condition & success_condition, "unit_pnl"] = payout * units
-    df.loc[condition & failure_condition, "unit_pnl"] = -1 * units
-    return df
+class BettingLogic:
+    def __init__(self, betting_fnc: str = "spread_cond_betting"):
+        self.betting_fnc = betting_fnc
+        self.spread_cover_probs = self._initialize_cond_probs()
 
+    def _apply_edge(
+        self,
+        odds_df,
+        condition,
+        success_condition,
+        failure_condition,
+        units,
+        payout=0.87,
+    ):
+        # TODO: replace with actual lines.
+        odds_df.loc[condition & success_condition, "unit_pnl"] = payout * units
+        odds_df.loc[condition & failure_condition, "unit_pnl"] = -1 * units
+        return odds_df
 
-def simple_percentage(df):
-    # Initialize column in case none of the conditions match
-    df["unit_pnl"] = 0
+    def _initialize_cond_probs(self) -> pd.DataFrame:
+        """
+        Gets conditional probability matrix. Utilizes Gaussian normal modified for higher probabilities of increments of 3 and 7.
+        Essentially, this allows us to see the difference in probability between two spread projections.
+        See https://arxiv.org/pdf/2212.08116.
 
-    over = (df["max_ou"] != 0) & (df["pred"] > 1.1 * df["max_ou"])
-    df = _apply_edge(
-        df, over, (df["total"] > df["max_ou"]), (df["total"] < df["max_ou"]), 1
-    )
+        Returns:
+            pd.DataFrame: Conditional probability matrix. Rows represent outcomes while columns represent betting lines and predictions.
+        """
+        hist_df = retrieve_data("cfb", "games")
+        hist_df["home_away_spread"] = hist_df["away_points"] - hist_df["home_points"]
+        count_col = hist_df[hist_df["home_away_spread"].abs() <= 60]["home_away_spread"]
+        hist_pcts = count_col.value_counts().sort_index() / len(count_col)
 
-    under = (df["min_ou"] != 0) & (df["pred"] < 0.9 * df["min_ou"])
-    df = _apply_edge(
-        df, under, (df["total"] < df["min_ou"]), (df["total"] > df["min_ou"]), 1
-    )
-    return df
+        # Hard-coded, better results with a slightly larger sd
+        historical_spread_range = np.arange(-60, 61)
+        historical_spread_lines_range = np.arange(-40, 41)
+        spread_sd = 22
+        cond_spread_sd = 15
 
+        gauss_probs = norm.cdf(
+            historical_spread_range + 0.5, loc=0, scale=spread_sd
+        ) - norm.cdf(historical_spread_range - 0.5, loc=0, scale=spread_sd)
+        gauss_probs = pd.Series(gauss_probs, index=historical_spread_range, name="norm")
 
-def simple_stellage(df):
-    # The greater the edge, the larger the size up
-    df["unit_pnl"] = 0
+        mult_df = pd.concat([hist_pcts, gauss_probs], axis=1)
+        mult_df["mult"] = mult_df["count"] / mult_df["norm"]
 
-    over1 = (df["max_ou"] != 0) & (df["pred"] > 1.1 * df["max_ou"])
-    over2 = (df["max_ou"] != 0) & (df["pred"] > 1.2 * df["max_ou"])
-    df = _apply_edge(
-        df, over1, (df["total"] > df["max_ou"]), (df["total"] < df["max_ou"]), 1
-    )
-    df = _apply_edge(
-        df, over2, (df["total"] > df["max_ou"]), (df["total"] < df["max_ou"]), 2
-    )
+        # Every column is the PMF of N(mu, 15), where mu is the spreads line
+        cdf_dict = {
+            line: norm.cdf(
+                historical_spread_range + 0.5, loc=line, scale=cond_spread_sd
+            )
+            - norm.cdf(historical_spread_range - 0.5, loc=line, scale=cond_spread_sd)
+            for line in historical_spread_lines_range
+        }
+        cond_df = pd.DataFrame(cdf_dict, index=historical_spread_range)
 
-    under1 = (df["min_ou"] != 0) & (df["pred"] < 0.9 * df["min_ou"])
-    under2 = (df["min_ou"] != 0) & (df["pred"] < 0.8 * df["min_ou"])
-    df = _apply_edge(
-        df, under1, (df["total"] < df["min_ou"]), (df["total"] > df["min_ou"]), 1
-    )
-    df = _apply_edge(
-        df, under2, (df["total"] < df["min_ou"]), (df["total"] > df["min_ou"]), 2
-    )
-    return df
+        # Multiply by factor and normalize
+        cond_df = cond_df.mul(mult_df["mult"], axis=0)
+        for col in cond_df:
+            cond_df[col] = cond_df[col] / (cond_df[col].sum())
 
+        # Probability of a given line to cover
+        # cover_probs = cond_df.apply(lambda col: col[col.index < col.name].sum(), axis=0)
+        return cond_df
 
-def kelly_criterion(df):
-    # kelly_size = p - (1-q)/b
-    pass
+    def _get_weighted_cover_prob(self, our_line: int, book_line: int):
+        if (
+            pd.isna(our_line)
+            or our_line is None
+            or pd.isna(book_line)
+            or book_line is None
+        ):
+            return None
 
+        clipped = np.clip(our_line, -40, 40)
 
-# Brier Score
+        our_upper = int(np.ceil(clipped))
+        our_lower = int(np.floor(clipped))
+        our_upper_wt = our_line - our_lower
+        our_lower_wt = our_upper - our_line
+
+        book_upper = int(np.ceil(book_line))
+        book_lower = int(np.floor(book_line))
+        book_upper_wt = book_line - book_lower
+        book_lower_wt = book_upper - book_line
+
+        # assume flat numbers for ease. Then we want to take OUR guess (let's say we have 8 point favs vs 7 for line)
+        # get the prob of getting above 7 IE what are the odds that our bet hits? we need >= 52.4%
+        prob_cover = our_upper_wt * (
+            book_upper_wt
+            * self.spread_cover_probs.loc[
+                self.spread_cover_probs.index <= book_upper, our_upper
+            ].sum()
+            + book_lower_wt
+            * self.spread_cover_probs.loc[
+                self.spread_cover_probs.index <= book_lower, our_upper
+            ].sum()
+        ) + our_lower_wt * (
+            book_upper_wt
+            * self.spread_cover_probs.loc[
+                self.spread_cover_probs.index <= book_upper, our_lower
+            ].sum()
+            + book_lower_wt
+            * self.spread_cover_probs.loc[
+                self.spread_cover_probs.index <= book_upper, our_lower
+            ].sum()
+        )
+        return prob_cover
+
+    def spread_probs(self, odds_df):
+        # pred of covering min conditional on our theo
+        odds_df["cover_min_prob"] = odds_df.apply(
+            lambda row: self._get_weighted_cover_prob(row["pred"], row["min_spread"]),
+            axis=1,
+        )
+        odds_df["cover_max_prob"] = odds_df.apply(
+            lambda row: self._get_weighted_cover_prob(row["pred"], row["max_spread"]),
+            axis=1,
+        )
+
+        home_better = (odds_df["pred"] < odds_df["min_spread"]) & (
+            odds_df["cover_min_prob"] > 0.60
+        )
+        odds_df = self._apply_edge(
+            odds_df,
+            home_better,
+            (odds_df["home_away_spread"] < odds_df["min_spread"]),
+            odds_df["home_away_spread"] > odds_df["min_spread"],
+            1,
+        )
+
+        home_worse = (odds_df["pred"] > odds_df["max_spread"]) & (
+            odds_df["cover_max_prob"] < 0.40
+        )
+        odds_df = self._apply_edge(
+            odds_df,
+            home_worse,
+            (odds_df["home_away_spread"] > odds_df["max_spread"]),
+            odds_df["home_away_spread"] < odds_df["max_spread"],
+            1,
+        )
+        return odds_df
+
+    def apply_bets(self, odds_df):
+        return getattr(self, self.betting_fnc)(odds_df)

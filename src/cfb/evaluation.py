@@ -8,7 +8,6 @@ import pandas as pd
 from IPython.display import display
 from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 from sklearn.pipeline import Pipeline
-from strategy import betting_logic
 
 PROJECT_ROOT = os.getenv("PROJECT_ROOT", os.getcwd())
 pd.set_option("future.no_silent_downcasting", True)
@@ -17,7 +16,7 @@ pd.set_option("future.no_silent_downcasting", True)
 def load_pkl_if_exists(
     name_str: str,
     target_str: str = "total",
-    betting_fnc: Callable = betting_logic.simple_percentage,
+    betting_fnc: str = "spread_probs",
     file_type: str = "odds_df",
 ) -> Union[Pipeline, pd.DataFrame]:
     """
@@ -26,7 +25,7 @@ def load_pkl_if_exists(
     Args:
         name_str (str): Prefix of file string.
         target_str (str, optional): For model, the target column. Defaults to "total".
-        betting_fnc (Callable, optional): Function to determine bets. Defaults to betting_logic.simple_percentage.
+        betting_fnc (str, optional): Function to determine bets. Defaults to "spread_probs.
         file_type (str, optional): Type of file to retrieve. Defaults to "df".
 
     Raises:
@@ -52,7 +51,7 @@ def load_pkl_if_exists(
     elif file_type == "odds_df":
         file_path = os.path.join(
             PROJECT_ROOT,
-            f"src/cfb/models/{name_str}_{target_str}_{betting_fnc.__name__}.pkl",
+            f"src/cfb/models/{name_str}_{target_str}_{betting_fnc}.pkl",
         )
     if not os.path.exists(file_path):
         raise Exception(f"No properly configured {file_type} file.")
@@ -60,12 +59,18 @@ def load_pkl_if_exists(
     return result
 
 
-def get_group_features(model_str: str) -> pd.DataFrame:
+def get_group_features(
+    model_str: str,
+    target_str: str = "home_away_spread",
+    betting_fnc: str = "spread_probs",
+) -> pd.DataFrame:
     """
     Generates a contrib_df grouped by offense and defensive totals
 
     Args:
         model_str (str): String of the desired model.
+        target_str (str, optional): For model, the target column. Defaults to "home_away_spread".
+        betting_fnc (str, optional): Function to determine bets. Defaults to "spread_probs.
 
     Returns:
         pd.DataFrame: Contrib_df with grouped metrics.
@@ -84,45 +89,30 @@ def get_group_features(model_str: str) -> pd.DataFrame:
     ]
     defense_roots = ["points_against", "passing_yds_given_up"]
 
-    model_contrib_df = load_pkl_if_exists(model_str, file_type="contrib_df")
-    model_contrib_df["offense_total"] = (
-        model_contrib_df[
-            [
-                col
-                for col in model_contrib_df.columns
-                if any(col.endswith(root) for root in offense_roots)
-            ]
-        ]
-        .abs()
-        .sum(axis=1)
+    model_contrib_df = load_pkl_if_exists(
+        model_str, target_str, betting_fnc, file_type="contrib_df"
     )
-    model_contrib_df["defense_total"] = (
-        model_contrib_df[
-            [
-                col
-                for col in model_contrib_df.columns
-                if any(col.endswith(root) for root in defense_roots)
-            ]
+    model_contrib_df["offense_total"] = model_contrib_df[
+        [
+            col
+            for col in model_contrib_df.columns
+            if any(col.endswith(root) for root in offense_roots)
         ]
-        .abs()
-        .sum(axis=1)
-    )
-    model_contrib_df["abs_contrib_total"] = model_contrib_df[
-        ["offense_total", "defense_total"]
     ].sum(axis=1)
-    model_contrib_df["offense_pct"] = (
-        model_contrib_df["offense_total"] / model_contrib_df["abs_contrib_total"]
-    )
-    model_contrib_df["defense_pct"] = (
-        model_contrib_df["defense_total"] / model_contrib_df["abs_contrib_total"]
-    )
+    model_contrib_df["defense_total"] = model_contrib_df[
+        [
+            col
+            for col in model_contrib_df.columns
+            if any(col.endswith(root) for root in defense_roots)
+        ]
+    ].sum(axis=1)
     return model_contrib_df
 
 
 def plot_pnl(
     model_str: str,
     target_str: str = "total",
-    betting_fnc: Callable = betting_logic.simple_percentage,
+    betting_fnc: str = "spread_probs",
 ):
     """
     Plots the net unit pnl given a model.
@@ -130,7 +120,7 @@ def plot_pnl(
     Args:
         model_str (str): Model prefix.
         target_str (str, optional): For model, the target column. Defaults to "total".
-        betting_fnc (Callable, optional): Betting function. Defaults to betting_logic.simple_percentage.
+        betting_fnc (str, optional): Function to determine bets. Defaults to "spread_probs.
     """
     model_df = load_pkl_if_exists(model_str, target_str, betting_fnc, "odds_df")
     model_df.fillna(0, inplace=True)
@@ -139,7 +129,7 @@ def plot_pnl(
 
     plt.plot(
         plot_model_df["unit_pnl"].cumsum() + 100,
-        label=f"{model_str}_{target_str}_{betting_fnc.__name__}",
+        label=f"{model_str}_{target_str}_{betting_fnc}",
     )
     plt.xlabel("Games")
     plt.ylabel("Total Units")
@@ -153,10 +143,7 @@ def plot_pnl_comparison(
     model_str: str,
     baseline_str: str = "model_4_2_25",
     target_str: str = "total",
-    betting_fncs: Tuple[Callable] = (
-        betting_logic.simple_percentage,
-        betting_logic.simple_percentage,
-    ),
+    betting_fncs: Tuple[str] = ("spread_probs", "spread_probs"),
 ):
     """
     Plots the comparative net unit pnl given a model and a baseline.
@@ -165,7 +152,7 @@ def plot_pnl_comparison(
         model_str (str): Model prefix.
         baseline_str (str): Baseline model prefix.
         target_str (str, optional): For model, the target column. Defaults to "total".
-        betting_fncs (Tuple[Callable], optional): Betting functions. Defaults to betting_logic.simple_percentage for both.
+        betting_fncs (Tuple[str], optional): Betting functions. Defaults to "spread_probs" for both.
     """
     plot_model_df = load_pkl_if_exists(
         model_str, target_str, betting_fncs[0], "odds_df"
@@ -183,11 +170,11 @@ def plot_pnl_comparison(
 
     plt.plot(
         plot_model_df["unit_pnl"].cumsum() + 100,
-        label=f"{model_str}_{target_str}_{betting_fncs[0].__name__}",
+        label=f"{model_str}_{target_str}_{betting_fncs[0]}",
     )
     plt.plot(
         plot_baseline_df["unit_pnl"].cumsum() + 100,
-        label=f"{baseline_str}_{target_str}_{betting_fncs[1].__name__}",
+        label=f"{baseline_str}_{target_str}_{betting_fncs[1]}",
     )
     plt.xlabel("Games")
     plt.ylabel("Total Units")
@@ -200,7 +187,7 @@ def plot_pnl_comparison(
 def get_pred_metrics(
     model_str: str,
     target_str: str = "total",
-    betting_fnc: Callable = betting_logic.simple_percentage,
+    betting_fnc: str = "spread_probs",
 ) -> pd.DataFrame:
     """
     Creates a DataFrame with necessary betting and prediction metrics of the model.
@@ -208,13 +195,13 @@ def get_pred_metrics(
     Args:
         model_str (str): Model prefix.
         target_str (str, optional): Target column. Defaults to "total".
-        betting_fnc (Callable, optional): Betting function. Defaults to betting_logic.simple_percentage.
+        betting_fnc (str, optional): Function to determine bets. Defaults to "spread_probs.
 
     Returns:
         pd.DataFrame: DataFrame with different model metrics.
     """
     model_df = load_pkl_if_exists(model_str, target_str, betting_fnc, "odds_df")
-    model_df.dropna(inplace=True)
+    model_df.dropna(inplace=True, subset=[target_str, "pred"])
     y = model_df[target_str].values
     y_hat = model_df["pred"].values
 
@@ -225,9 +212,10 @@ def get_pred_metrics(
     bet_results = model_df["unit_pnl"].dropna()
     bet_results = bet_results[bet_results != 0]
     total_units = bet_results.cumsum() + 100
-    sharpe = total_units.mean() / total_units.std()
-
     net_pnl = bet_results.sum()
+
+    sharpe = net_pnl / total_units.std()
+
     max_drawdown = min(bet_results.cumsum())
     percent_winning = (bet_results > 0).sum() / len(bet_results)
     num_bets = (bet_results != 0).sum()
@@ -242,9 +230,7 @@ def get_pred_metrics(
         "Number of Bets": num_bets,
         "Winning Bet %": percent_winning,
     }
-    metric_df = pd.DataFrame(
-        metrics, index=[f"{model_str}_{target_str}_{betting_fnc.__name__}"]
-    )
+    metric_df = pd.DataFrame(metrics, index=[f"{model_str}_{target_str}_{betting_fnc}"])
     metric_df.index.name = "model"
     return metric_df
 
@@ -299,10 +285,7 @@ def compare_models(
     model_str: str,
     baseline_str: str = "model_4_2_25",
     target_str: str = "total",
-    betting_fncs: Tuple[Callable] = (
-        betting_logic.simple_percentage,
-        betting_logic.simple_percentage,
-    ),
+    betting_fncs: Tuple[str] = ("spread_probs", "spread_probs"),
 ):
     plot_pnl_comparison(model_str, baseline_str, target_str, betting_fncs)
     metric_df = pd.concat(

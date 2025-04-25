@@ -135,6 +135,8 @@ def get_features_and_model_pipeline() -> Pipeline:
         "away_passes",
         "away_penalties",
         "away_penalty_yds",
+        # ------ Separate Future Looking ------
+        "total",
     ]
 
     drop_transformer = ColumnTransformer(
@@ -162,7 +164,7 @@ def get_features_and_model_pipeline() -> Pipeline:
                 ),
             ),
             ("print_fit", PrintTransformer("Fitting model...")),
-            ("light_gbm_regressor", LGBMRegressor(**lgbm_params)),
+            ("light_gbm", LGBMRegressor(**lgbm_params)),
         ]
     )
     return pipeline

@@ -28,5 +28,5 @@ class PrintTransformer(BaseEstimator, TransformerMixin):
         Returns:
             pd.DataFrame: Same input DataFrame.
         """
-        print(f"{self.message}:")
+        print(f"{self.message}")
         return X
