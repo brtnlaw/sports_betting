@@ -19,10 +19,10 @@ def load_config(
     Loads config file.
 
     Args:
-        config_path(str): Path of the config
+        config_path(str): Path of the config.
 
     Returns:
-        dict[str]: Config from the file
+        dict[str]: Config from the file.
     """
     with open(config_path, "r") as file:
         config = yaml.safe_load(file)
@@ -58,8 +58,8 @@ def pull_from_db(query: str, params: Optional[dict] = None) -> Optional[pd.DataF
     Wrapper for pulling from the database given a query.
 
     Args:
-        query (str): Query for the database
-        params Optional[dict]: Params for query
+        query (str): Query for the database.
+        params Optional[dict]: Params for query.
 
     Returns:
         Optional[pd.DataFrame]: Data if available from database.

@@ -1,5 +1,5 @@
 import os
-from typing import List, Tuple, Union
+from typing import Tuple, Union
 
 import joblib
 import lightgbm as lgb
@@ -113,7 +113,7 @@ def plot_pnl(
     model_str: str,
     target_str: str = "home_away_spread",
     betting_fnc: str = "spread_probs",
-):
+) -> None:
     """
     Plots the net unit pnl given a model.
 
@@ -144,7 +144,7 @@ def plot_pnl_comparison(
     baseline_str: str = "baseline",
     target_str: str = "home_away_spread",
     betting_fncs: Tuple[str] = ("spread_probs", "spread_probs"),
-):
+) -> None:
     """
     Plots the comparative net unit pnl given a model and a baseline.
 
@@ -300,7 +300,7 @@ def compare_models(
     target_str: str = "home_away_spread",
     betting_fncs: Tuple[str] = ("spread_probs", "spread_probs"),
     betting_cols: Tuple[str] = ("min_spread", "max_spread"),
-):
+) -> None:
     """
     Compare two models and gives the full suite of metrics.
 
