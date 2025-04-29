@@ -19,15 +19,20 @@ def offense_pipeline() -> Pipeline:
     offense_pipeline = Pipeline(
         [
             (
-                "rolling_offense_1_3_5",
+                "rolling_points_for",
                 RollingTransformer(
-                    "points_for", "home_points", "away_points", [1, 3, 5], 1, "mean"
+                    "rolling_points_for",
+                    "home_points",
+                    "away_points",
+                    [1, 3, 5],
+                    1,
+                    "mean",
                 ),
             ),
             (
-                "rolling_third_down_attempts_1_3_5",
+                "rolling_third_down_attempts",
                 RollingTransformer(
-                    "third_down_attempts",
+                    "rolling_third_down_attempts",
                     "home_third_down_attempts",
                     "away_third_down_attempts",
                     [1, 3, 5],
@@ -36,9 +41,9 @@ def offense_pipeline() -> Pipeline:
                 ),
             ),
             (
-                "rolling_third_down_successes_1_3_5",
+                "rolling_third_down_successes",
                 RollingTransformer(
-                    "third_down_successes",
+                    "rolling_third_down_successes",
                     "home_third_down_successes",
                     "away_third_down_successes",
                     [1, 3, 5],
@@ -47,9 +52,9 @@ def offense_pipeline() -> Pipeline:
                 ),
             ),
             (
-                "rolling_fourth_down_attempts_1_3_5",
+                "rolling_fourth_down_attempts",
                 RollingTransformer(
-                    "fourth_down_attempts",
+                    "rolling_fourth_down_attempts",
                     "home_fourth_down_attempts",
                     "away_fourth_down_attempts",
                     [1, 3, 5],
@@ -58,9 +63,9 @@ def offense_pipeline() -> Pipeline:
                 ),
             ),
             (
-                "rolling_fourth_down_successes_1_3_5",
+                "rolling_fourth_down_successes",
                 RollingTransformer(
-                    "fourth_down_successes",
+                    "rolling_fourth_down_successes",
                     "home_fourth_down_successes",
                     "away_fourth_down_successes",
                     [1, 3, 5],
@@ -69,64 +74,9 @@ def offense_pipeline() -> Pipeline:
                 ),
             ),
             (
-                "rolling_passing_yds_for_1_3_5",
-                RollingTransformer(
-                    "passing_yds_for",
-                    "home_net_passing_yards",
-                    "away_net_passing_yards",
-                    [1, 3, 5],
-                    1,
-                    "mean",
-                ),
-            ),
-            (
-                "rolling_ints_thrown_1_3_5",
-                RollingTransformer(
-                    "ints_thrown",
-                    "home_interceptions",
-                    "away_interceptions",
-                    [1, 3, 5],
-                    1,
-                    "mean",
-                ),
-            ),
-            (
-                "rolling_rushing_yds_for_1_3_5",
-                RollingTransformer(
-                    "rushing_yds_for",
-                    "home_rushing_yards",
-                    "away_rushing_yards",
-                    [1, 3, 5],
-                    1,
-                    "mean",
-                ),
-            ),
-            (
-                "rolling_passing_tds_1_3_5",
-                RollingTransformer(
-                    "passing_tds",
-                    "home_passing_tds",
-                    "away_passing_tds",
-                    [1, 3, 5],
-                    1,
-                    "mean",
-                ),
-            ),
-            (
-                "rolling_rushing_tds_1_3_5",
-                RollingTransformer(
-                    "rushing_tds",
-                    "home_rushing_tds",
-                    "away_rushing_tds",
-                    [1, 3, 5],
-                    1,
-                    "mean",
-                ),
-            ),
-            (
-                "kalman_offense",
+                "kalman_points_for",
                 KalmanTransformer(
-                    "points_for",
+                    "kalman_points_for",
                     "home_points",
                     "away_points",
                 ),
@@ -146,15 +96,20 @@ def defense_pipeline() -> Pipeline:
     defense_pipeline = Pipeline(
         [
             (
-                "rolling_defense_1_3_5",
+                "rolling_points_against",
                 RollingTransformer(
-                    "points_against", "away_points", "home_points", [1, 3, 5], 1, "mean"
+                    "rolling_points_against",
+                    "away_points",
+                    "home_points",
+                    [1, 3, 5],
+                    1,
+                    "mean",
                 ),
             ),
             (
-                "rolling_passing_yds_given_up_1_3_5",
+                "rolling_passing_yds_given_up",
                 RollingTransformer(
-                    "passing_yds_given_up",
+                    "rolling_passing_yds_given_up",
                     "away_net_passing_yards",
                     "home_net_passing_yards",
                     [1, 3, 5],
@@ -163,9 +118,9 @@ def defense_pipeline() -> Pipeline:
                 ),
             ),
             (
-                "kalman_defense",
+                "kalman_points_against",
                 KalmanTransformer(
-                    "points_against",
+                    "kalman_points_against",
                     "away_points",
                     "home_points",
                 ),
@@ -173,6 +128,77 @@ def defense_pipeline() -> Pipeline:
         ]
     )
     return defense_pipeline
+
+
+def pass_game_pipeline() -> Pipeline:
+    pass_game_pipeline = Pipeline(
+        [
+            (
+                "rolling_passing_yds_for",
+                RollingTransformer(
+                    "rolling_passing_yds_for",
+                    "home_net_passing_yards",
+                    "away_net_passing_yards",
+                    [1, 3, 5],
+                    1,
+                    "mean",
+                ),
+            ),
+            (
+                "rolling_ints_thrown",
+                RollingTransformer(
+                    "rolling_ints_thrown",
+                    "home_interceptions",
+                    "away_interceptions",
+                    [1, 3, 5],
+                    1,
+                    "mean",
+                ),
+            ),
+            (
+                "rolling_passing_tds",
+                RollingTransformer(
+                    "rolling_passing_tds",
+                    "home_passing_tds",
+                    "away_passing_tds",
+                    [1, 3, 5],
+                    1,
+                    "mean",
+                ),
+            ),
+        ]
+    )
+    return pass_game_pipeline
+
+
+def run_game_pipeline() -> Pipeline:
+    run_game_pipeline = Pipeline(
+        [
+            (
+                "rolling_rushing_tds",
+                RollingTransformer(
+                    "rolling_rushing_tds",
+                    "home_rushing_tds",
+                    "away_rushing_tds",
+                    [1, 3, 5],
+                    1,
+                    "mean",
+                ),
+            ),
+            (
+                "rolling_rushing_yds_for",
+                RollingTransformer(
+                    "rolling_rushing_yds_for",
+                    "home_rushing_yards",
+                    "away_rushing_yards",
+                    [1, 3, 5],
+                    1,
+                    "mean",
+                ),
+            ),
+        ]
+    )
+    return run_game_pipeline
 
 
 def feature_pipeline() -> Pipeline:
@@ -187,6 +213,8 @@ def feature_pipeline() -> Pipeline:
             ("days_since", DaysSinceLastGameTransformer()),
             ("offense_pipeline", offense_pipeline()),
             ("defense_pipeline", defense_pipeline()),
+            ("pass_game_pipeline", pass_game_pipeline()),
+            ("run_game_pipeline", run_game_pipeline()),
         ]
     )
     return pipeline

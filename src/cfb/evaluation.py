@@ -1,65 +1,20 @@
 import os
-from typing import Tuple, Union
+from typing import Tuple
 
-import joblib
 import lightgbm as lgb
 import matplotlib.pyplot as plt
 import pandas as pd
 from IPython.display import display
+from pipelines.features import *
 from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
-from sklearn.pipeline import Pipeline
+
+from model_utils import load_pkl_if_exists
 
 PROJECT_ROOT = os.getenv("PROJECT_ROOT", os.getcwd())
 pd.set_option("future.no_silent_downcasting", True)
 
 
-def load_pkl_if_exists(
-    name_str: str,
-    target_str: str = "total",
-    betting_fnc: str = "spread_probs",
-    file_type: str = "odds_df",
-) -> Union[Pipeline, pd.DataFrame]:
-    """
-    Helper function to load 'pipeline', 'contrib_df', or 'odds_df' from a str.
-
-    Args:
-        name_str (str): Prefix of file string.
-        target_str (str, optional): For model, the target column. Defaults to "total".
-        betting_fnc (str, optional): Function to determine bets. Defaults to "spread_probs".
-        file_type (str, optional): Type of file to retrieve. Defaults to "df".
-
-    Raises:
-        Exception: Necessarily is a 'pipeline' or 'df' file.
-
-    Returns:
-        Any[Pipeline, pd.DataFrame]: Returns either a pipeline or DataFrame.
-    """
-    assert file_type in [
-        "pipeline",
-        "contrib_df",
-        "odds_df",
-    ], "Pick a file_type in 'pipeline', 'contrib_df', 'odds_df'"
-    if file_type == "pipeline":
-        file_path = os.path.join(
-            PROJECT_ROOT, f"src/cfb/models/{name_str}_{target_str}_pipeline.pkl"
-        )
-    elif file_type == "contrib_df":
-        file_path = os.path.join(
-            PROJECT_ROOT,
-            f"src/cfb/models/{name_str}_{target_str}_contrib.pkl",
-        )
-    elif file_type == "odds_df":
-        file_path = os.path.join(
-            PROJECT_ROOT,
-            f"src/cfb/models/{name_str}_{target_str}_{betting_fnc}.pkl",
-        )
-    if not os.path.exists(file_path):
-        raise Exception(f"No properly configured {file_type} file.")
-    result = joblib.load(file_path)
-    return result
-
-
-def get_group_features(
+def get_model_interpretability(
     model_str: str,
     target_str: str = "home_away_spread",
     betting_fnc: str = "spread_probs",
@@ -75,37 +30,45 @@ def get_group_features(
     Returns:
         pd.DataFrame: Contrib_df with grouped metrics.
     """
-    offense_roots = [
-        "points_for",
-        "third_down_attempts",
-        "third_down_successes",
-        "fourth_down_attempts",
-        "fourth_down_successes",
-        "passing_yds_for",
-        "ints_thrown",
-        "rushing_yds_for",
-        "passing_tds",
-        "rushing_tds",
-    ]
-    defense_roots = ["points_against", "passing_yds_given_up"]
+    offense = offense_pipeline()
+    defense = defense_pipeline()
+    pass_game = pass_game_pipeline()
+    run_game = run_game_pipeline()
+
+    offense_roots = [root for root, _ in offense.steps]
+    defense_roots = [root for root, _ in defense.steps]
+    pass_game_roots = [root for root, _ in pass_game.steps]
+    run_game_roots = [root for root, _ in run_game.steps]
 
     model_contrib_df = load_pkl_if_exists(
         model_str, target_str, betting_fnc, file_type="contrib_df"
     )
-    model_contrib_df["offense_total"] = model_contrib_df[
-        [
-            col
-            for col in model_contrib_df.columns
-            if any(col.endswith(root) for root in offense_roots)
-        ]
-    ].sum(axis=1)
-    model_contrib_df["defense_total"] = model_contrib_df[
-        [
-            col
-            for col in model_contrib_df.columns
-            if any(col.endswith(root) for root in defense_roots)
-        ]
-    ].sum(axis=1)
+
+    for side in ["home", "away"]:
+        for group, roots in [
+            ("offense", offense_roots),
+            ("defense", defense_roots),
+            ("pass_game", pass_game_roots),
+            ("run_game", run_game_roots),
+        ]:
+            model_contrib_df[f"{side}_{group}_total"] = model_contrib_df[
+                [
+                    col
+                    for col in model_contrib_df.columns
+                    if col.startswith(side)
+                    and any(col.endswith(root) for root in roots)
+                ]
+            ].sum(axis=1)
+
+    # Reorder columns
+    new_cols = [
+        f"{side}_{group}_total"
+        for side in ["home", "away"]
+        for group in ["offense", "defense", "pass_game", "run_game"]
+    ]
+    model_contrib_df = model_contrib_df[
+        new_cols + [col for col in model_contrib_df.columns if col not in new_cols]
+    ]
     return model_contrib_df
 
 
