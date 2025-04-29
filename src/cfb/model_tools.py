@@ -3,6 +3,9 @@ from typing import Union
 
 import joblib
 import pandas as pd
+from data.data_prep import DataPrep
+from pipelines.pipeline import get_features_and_model_pipeline
+from pipelines.preprocessing import get_preprocess_pipeline
 from sklearn.pipeline import Pipeline
 
 PROJECT_ROOT = os.getenv("PROJECT_ROOT", os.getcwd())
@@ -54,4 +57,31 @@ def load_pkl_if_exists(
     return result
 
 
-# NOTE: Simple post-pipeline df helper
+def get_transformed_data(target_col: str = "home_away_spread") -> pd.DataFrame:
+    """
+    Helper function to get the transformed data.
+
+    Args:
+        target_col (str, optional): Target column to drop from X. Defaults to "home_away_spread".
+
+    Returns:
+        pd.DataFrame: Finalized DataFrame through pipeline.
+    """
+    data_prep = DataPrep(dataset="cfb")
+    raw_data = data_prep.get_data()
+    preprocessed_data = get_preprocess_pipeline().fit_transform(raw_data)
+    target_line_dict = {
+        "total": ["min_ou", "max_ou"],
+        "home_away_spread": ["min_spread", "max_spread"],
+    }
+    all_betting_cols = [
+        line for line_list in target_line_dict.values() for line in line_list
+    ]
+
+    X = preprocessed_data.drop(columns=[target_col] + all_betting_cols)
+
+    pipeline = get_features_and_model_pipeline()
+
+    # Fit the pipeline up to the last step
+    pipeline_no_regress = Pipeline(pipeline.steps[:-1])
+    return pipeline_no_regress.transform(X)
