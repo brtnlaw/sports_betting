@@ -5,11 +5,12 @@ from scipy.stats import norm
 from db_utils import retrieve_data
 
 
+# TODO: Documentation
 class BettingLogic:
     SPREAD_SD = 22
     COND_SPREAD_SD = 15
 
-    def __init__(self, betting_fnc: str = "spread_cond_betting"):
+    def __init__(self, betting_fnc: str = "spread_probs"):
         self.betting_fnc = betting_fnc
         self.spread_cover_probs = self._initialize_cond_probs()
         self.spread_sd = self.SPREAD_SD

@@ -7,6 +7,7 @@ from data.data_prep import DataPrep
 from pipelines.pipeline import get_features_and_model_pipeline
 from pipelines.preprocessing import get_preprocess_pipeline
 from sklearn.pipeline import Pipeline
+from strategy.betting_logic import BettingLogic
 
 PROJECT_ROOT = os.getenv("PROJECT_ROOT", os.getcwd())
 
@@ -85,3 +86,36 @@ def get_transformed_data(target_col: str = "home_away_spread") -> pd.DataFrame:
     # Fit the pipeline up to the last step
     pipeline_no_regress = Pipeline(pipeline.steps[:-1])
     return pipeline_no_regress.transform(X)
+
+
+def apply_new_betting_logic(
+    model_str: str,
+    target_str: str = "home_away_spread",
+    existing_betting_fnc: str = "spread_probs",
+    new_betting_fnc: str = "",
+) -> pd.DataFrame:
+    """
+    Takes an existing odds_df, applies a new betting function, and stores into a pkl.
+
+    Args:
+        model_str (str): Desired model.
+        target_str (str, optional): Target column. Defaults to "home_away_spread".
+        existing_betting_fnc (str, optional): Betting function which has an existing pkl file. Defaults to "spread_probs".
+        new_betting_fnc (str, optional): New function to apply to predictions. Defaults to "".
+
+    Returns:
+        pd.DataFrame: The new odds_df.
+    """
+    file_path = os.path.join(
+        PROJECT_ROOT, f"src/cfb/models/{model_str}_{target_str}_{new_betting_fnc}.pkl"
+    )
+    if os.path.exists(file_path):
+        return joblib.load(file_path)
+
+    existing_odds_df = load_pkl_if_exists(
+        model_str, target_str, existing_betting_fnc, "odds_df"
+    )
+    betting_logic = BettingLogic(new_betting_fnc)
+    new_odds_df = betting_logic.apply_bets(existing_odds_df)
+    joblib.dump(new_odds_df, file_path)
+    return new_odds_df

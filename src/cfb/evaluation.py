@@ -40,7 +40,7 @@ def get_model_interpretability(
     run_game_roots = [root for root, _ in run_game.steps]
 
     model_contrib_df = load_pkl_if_exists(
-        model_str, target_str, betting_fnc, file_type="contrib_df"
+        model_str, target_str, betting_fnc, "contrib_df"
     )
 
     for side in ["home", "away"]:

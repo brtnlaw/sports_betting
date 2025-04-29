@@ -1,7 +1,6 @@
 ## TODOs
-- [ ] Potential helper function to get the transformed df right before model
 - [ ] Number of features
-- [ ] Function that takes a betting strategy and odds_df of existing, makes a new betting strategy odds_df
+- [ ] Documentation for betting_logic.py
 
 
 ## Shelved for later
