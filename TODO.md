@@ -2,7 +2,6 @@
 - [ ] Number of features
 - [ ] Documentation for betting_logic.py
 
-
 ## Shelved for later
 - [ ] Obtain basic historical market data with payouts
     - Frankly, -110 us a pretty safe estimate

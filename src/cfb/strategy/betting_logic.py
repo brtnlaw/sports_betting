@@ -7,10 +7,18 @@ from db_utils import retrieve_data
 
 # TODO: Documentation
 class BettingLogic:
+    """Class that handles all of the odds_df construction."""
+
     SPREAD_SD = 22
     COND_SPREAD_SD = 15
 
     def __init__(self, betting_fnc: str = "spread_probs"):
+        """
+        Initializes betting_fnc as well as the necessary matrices.
+
+        Args:
+            betting_fnc (str, optional): Desired function to apply. Defaults to "spread_probs".
+        """
         self.betting_fnc = betting_fnc
         self.spread_cover_probs = self._initialize_cond_probs()
         self.spread_sd = self.SPREAD_SD
@@ -18,13 +26,27 @@ class BettingLogic:
 
     def _apply_edge(
         self,
-        odds_df,
-        condition,
-        success_condition,
-        failure_condition,
-        units,
-        payout=0.87,
-    ):
+        odds_df: pd.DataFrame,
+        condition: pd.Series[bool],
+        success_condition: pd.Series[bool],
+        failure_condition: pd.Series[bool],
+        units: int = 1,
+        payout: int = 0.87,
+    ) -> pd.DataFrame:
+        """
+        Helper function to apply payouts to odds_df.
+
+        Args:
+            odds_df (pd.DataFrame): Original odds_df.
+            condition (pd.Series[bool]): Series representing bets we even consider.
+            success_condition (pd.Series[bool]): Series of when those bets are successful.
+            failure_condition (pd.Series[bool]): Series of when those bets are not successful.
+            units (int, optional): How many units are wagered. Defaults to 1.
+            payout (int, optional): Payout of being correct. Defaults to 0.87.
+
+        Returns:
+            pd.DataFrame: Updated betting DataFrame.
+        """
         # TODO: replace with actual lines.
         odds_df.loc[condition & success_condition, "unit_pnl"] = payout * units
         odds_df.loc[condition & failure_condition, "unit_pnl"] = -1 * units
@@ -75,7 +97,17 @@ class BettingLogic:
             cond_df[col] = cond_df[col] / (cond_df[col].sum())
         return cond_df
 
-    def _get_weighted_cover_prob(self, our_line: int, book_line: int):
+    def _get_weighted_cover_prob(self, our_line: int, book_line: int) -> float:
+        """
+        For spreads, conditions on our_line to get the probability of covering the book_line.
+
+        Args:
+            our_line (int): Our prediction or theo of the proper line.
+            book_line (int): The book line we want to assess our cover probability.
+
+        Returns:
+            float: Weighted probability.
+        """
         if (
             pd.isna(our_line)
             or our_line is None
@@ -117,7 +149,16 @@ class BettingLogic:
         )
         return prob_cover
 
-    def spread_probs(self, odds_df):
+    def spread_probs(self, odds_df: pd.DataFrame) -> pd.DataFrame:
+        """
+        Conditional on our prediction, make trade if the probability of covering the book line > 60%.
+
+        Args:
+            odds_df (pd.DataFrame): Odds DataFrame.
+
+        Returns:
+            pd.DataFrame: odds_df with the prediction and unit_pnl.
+        """
         # pred of covering min conditional on our theo
         odds_df["cover_min_prob"] = odds_df.apply(
             lambda row: self._get_weighted_cover_prob(row["pred"], row["min_spread"]),
@@ -151,5 +192,14 @@ class BettingLogic:
         )
         return odds_df
 
-    def apply_bets(self, odds_df):
+    def apply_bets(self, odds_df: pd.DataFrame) -> pd.DataFrame:
+        """
+        Applies the betting_fnc of the class to the odds_df.
+
+        Args:
+            odds_df (pd.DataFrame): DataFrame of odds.
+
+        Returns:
+            pd.DataFrame: odds_df with the given function applied.
+        """
         return getattr(self, self.betting_fnc)(odds_df)
