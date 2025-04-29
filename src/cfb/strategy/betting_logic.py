@@ -5,7 +5,6 @@ from scipy.stats import norm
 from db_utils import retrieve_data
 
 
-# TODO: Documentation
 class BettingLogic:
     """Class that handles all of the odds_df construction."""
 

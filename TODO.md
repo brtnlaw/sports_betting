@@ -1,6 +1,6 @@
 ## TODOs
 - [ ] Number of features
-- [ ] Documentation for betting_logic.py
+- [ ] Isotonic regression
 
 ## Shelved for later
 - [ ] Obtain basic historical market data with payouts
