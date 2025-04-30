@@ -92,7 +92,7 @@ def apply_new_betting_logic(
     model_str: str,
     target_str: str = "home_away_spread",
     existing_betting_fnc: str = "spread_probs",
-    new_betting_fnc: str = "",
+    new_betting_fnc: str = "spread_probs",
 ) -> pd.DataFrame:
     """
     Takes an existing odds_df, applies a new betting function, and stores into a pkl.
@@ -101,7 +101,7 @@ def apply_new_betting_logic(
         model_str (str): Desired model.
         target_str (str, optional): Target column. Defaults to "home_away_spread".
         existing_betting_fnc (str, optional): Betting function which has an existing pkl file. Defaults to "spread_probs".
-        new_betting_fnc (str, optional): New function to apply to predictions. Defaults to "".
+        new_betting_fnc (str, optional): New function to apply to predictions. Defaults to "spread_probs".
 
     Returns:
         pd.DataFrame: The new odds_df.

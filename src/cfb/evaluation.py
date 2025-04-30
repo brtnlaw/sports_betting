@@ -3,6 +3,7 @@ from typing import Tuple
 
 import lightgbm as lgb
 import matplotlib.pyplot as plt
+import numpy as np
 import pandas as pd
 from IPython.display import display
 from model_tools import load_pkl_if_exists
@@ -285,3 +286,29 @@ def compare_models(
     )
     display(metric_df)
     plot_model_metrics(model_str, baseline_str, target_str)
+
+
+# TODO: Function that buckets the expected edge in spread and gets win rate / # of plays, then apply isotonic regression...?
+def get_bucketed_wr_pnl(
+    model_str: str, target_str: str = "home_away_spread", betting_fnc="spread_probs"
+):
+    odds_df = load_pkl_if_exists(model_str, target_str, betting_fnc, "odds_df")
+    if target_str == "home_away_spread":
+        odds_df["spread_diff"] = odds_df["home_away_spread"] - odds_df["pred"]
+        min_edge = int(np.floor(odds_df["spread_diff"].min()))
+        max_edge = int(np.ceil(odds_df["spread_diff"].max()))
+        bucket_edges = list(range(min_edge, max_edge + 2, 2))
+        # Left inclusive
+        odds_df["edge_bucket"] = pd.cut(
+            odds_df["spread_diff"], bins=bucket_edges, include_lowest=True, right=False
+        )
+        # Only trades made
+        odds_df = odds_df[odds_df["unit_pnl"] != 0]
+        odds_df["covered"] = 1 if odds_df["unit_pnl"] > 0 else -1
+        bucket_stats = (
+            odds_df.groupby("edge_bucket")
+            .agg(win_rate=("covered", "mean"), count=("covered", "size"))
+            .reset_index()
+        )
+
+    pass
