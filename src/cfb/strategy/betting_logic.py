@@ -19,16 +19,16 @@ class BettingLogic:
             betting_fnc (str, optional): Desired function to apply. Defaults to "spread_probs".
         """
         self.betting_fnc = betting_fnc
-        self.spread_cover_probs = self._initialize_cond_probs()
         self.spread_sd = self.SPREAD_SD
         self.cond_spread_sd = self.COND_SPREAD_SD
+        self.spread_cover_probs = self._initialize_cond_probs()
 
     def _apply_edge(
         self,
         odds_df: pd.DataFrame,
-        condition: pd.Series[bool],
-        success_condition: pd.Series[bool],
-        failure_condition: pd.Series[bool],
+        condition: pd.Series,
+        success_condition: pd.Series,
+        failure_condition: pd.Series,
         units: int = 1,
         payout: int = 0.87,
     ) -> pd.DataFrame:

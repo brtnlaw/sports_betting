@@ -84,8 +84,8 @@ def get_transformed_data(target_col: str = "home_away_spread") -> pd.DataFrame:
     pipeline = get_features_and_model_pipeline()
 
     # Fit the pipeline up to the last step
-    pipeline_no_regress = Pipeline(pipeline.steps[:-1])
-    return pipeline_no_regress.transform(X)
+    pipeline_no_regress = Pipeline(pipeline.steps[:-3])
+    return pipeline_no_regress.fit_transform(X)
 
 
 def apply_new_betting_logic(

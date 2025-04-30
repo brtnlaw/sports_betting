@@ -1,5 +1,6 @@
 import os
 import pickle as pkl
+import time
 import warnings
 
 import cfbd
@@ -140,9 +141,10 @@ class CFBLineData:
             print(f"Uploading lines data for {year}...")
             data = self.load_lines_from_pkl_at_year(year)
             insert_data_to_db(query, data)
+            time.sleep(0.5)
 
 
 if __name__ == "__main__":
-    # python src/cfb/data/pull_line_data.py
+    # python src/cfb/data/cfb_line_data.py
     pipeline = CFBLineData()
     pipeline.upload_lines_to_db()

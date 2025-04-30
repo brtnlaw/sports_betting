@@ -44,7 +44,9 @@ class DaysSinceLastGameTransformer(BaseEstimator, TransformerMixin):
                 )
                 .set_index(X_.index.name)
             )
-            X_[f"previous_game_{side}"].fillna(dt.date(2000, 1, 1), inplace=True)
+            X_[f"previous_game_{side}"] = X_[f"previous_game_{side}"].fillna(
+                dt.date(2000, 1, 1)
+            )
             X_[f"{side}_days_since_last_game"] = (
                 X_["start_date"] - X_[f"previous_game_{side}"]
             ).apply(lambda x: x.days)

@@ -1,5 +1,6 @@
 import os
 import pickle as pkl
+import time
 import warnings
 
 import cfbd
@@ -138,9 +139,10 @@ class CFBGameData:
             print(f"Uploading games data for {year}...")
             data = self.load_games_from_pkl_at_year(year)
             insert_data_to_db(query, data)
+            time.sleep(0.5)
 
 
 if __name__ == "__main__":
-    # python src/cfb/data/pull_game_data.py
+    # python src/cfb/data/cfb_game_data.py
     pipeline = CFBGameData()
     pipeline.upload_games_to_db()

@@ -3,11 +3,11 @@ filterpy==1.4.5
 ipython==8.12.3
 joblib==1.4.2
 lightgbm==4.6.0
-matplotlib==3.10.1
-numpy==2.2.5
-pandas==2.2.3
-psycopg2==2.9.9
+matplotlib
+numpy
+pandas
+psycopg2
 python-dotenv==1.1.0
 PyYAML==6.0.2
 scikit_learn==1.6.1
-scipy==1.15.2
+scipy

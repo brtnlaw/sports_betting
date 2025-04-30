@@ -74,7 +74,8 @@ def pull_from_db(query: str, params: Optional[dict] = None) -> Optional[pd.DataF
 
     data = None
     try:
-        with warnings.catch_warnings(action="ignore"):
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
             data = pd.read_sql_query(query, conn, params)
     except psycopg2.Error as e:
         print("Error executing query:", e)

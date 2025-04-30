@@ -17,7 +17,8 @@ Looks for relative value within betting odds within CFB.
 - Download PostgreSQL
     - Optional: Download DBeaver
 - Run the sql files
-- Download the requirements.txt
+- Download the requirements.txt 
+    - May need to add pg_config to path, PATH="/Library/PostgreSQL/17/bin/:$PATH"
 ```
 pip install -r requirements.txt
 ```
@@ -30,11 +31,17 @@ database:
   host:
   port:
 ```
-- When editing, make sure to activate the venv. If not done yet, run below, else only run the second line.
+- When editing, make sure to activate the venv. If not done yet, run below, else only run the second line. 
+Windows
 ```
 python -m venv venv
 ./venv/Scripts/activate
-pip install -e C:\Users\brtnl\OneDrive\Desktop\code\sports_betting
+pip install -e .
+```
+Mac
+```
+python3 -m venv venv
+source venv/bin/activate
 ```
 - Set up a .env file
 ```

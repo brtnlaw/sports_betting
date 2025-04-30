@@ -1,5 +1,6 @@
 import os
 import pickle as pkl
+import time
 import warnings
 
 import cfbd
@@ -184,9 +185,10 @@ class CFBGameTeamData:
                 print(f"Uploading game team stats for {year}, week {week}...")
                 data = self.load_game_team_stats_from_pkl_at_year_week(year, week)
                 insert_data_to_db(query, data)
+                time.sleep(0.5)
 
 
 if __name__ == "__main__":
-    # python src/cfb/data/pull_game_team_data.py
+    # python src/cfb/data/cfb_game_team_data.py
     pipeline = CFBGameTeamData()
     pipeline.upload_game_team_stats_to_db()

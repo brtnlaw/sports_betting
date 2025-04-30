@@ -22,6 +22,7 @@ class DataPrep:
         self.dataset = dataset
         self.df = None
 
+    # TODO: Fix the ordering
     def make_schemas_tables(self):
         """Generates all the schemas and tables, if they don't already exist."""
         queries_path = os.path.join(PROJECT_ROOT, f"src/cfb/data/sql_queries/")
@@ -107,6 +108,7 @@ class DataPrep:
             inplace=True,
         )
 
+    # TODO: venue -> game -> line -> game_team_data
     def get_data(self):
         """Returns the un-processed data for further transformations."""
         self.load_data()

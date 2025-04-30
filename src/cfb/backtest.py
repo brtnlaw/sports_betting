@@ -14,6 +14,7 @@ from sklearn.pipeline import Pipeline
 from strategy.betting_logic import BettingLogic
 
 warnings.simplefilter(action="ignore", category=FutureWarning)
+warnings.simplefilter(action="ignore", category=UserWarning)
 warnings.simplefilter(action="ignore", category=pd.errors.SettingWithCopyWarning)
 
 PROJECT_ROOT = os.getenv("PROJECT_ROOT", os.getcwd())
@@ -28,7 +29,7 @@ class RollingTimeSeriesSplit(BaseCrossValidator):
 
         Args:
             seasons (pd.Series): Seasons Series with corresponding index.
-            fixed_window_length (int, optional): Number of seasons in rolling window. Defaults to 5.
+            fixed_window_size (int, optional): Number of seasons in rolling window. Defaults to 5.
         """
         self.seasons = seasons
         self.fixed_window_size = fixed_window_size
@@ -56,7 +57,7 @@ def cross_validate(
     pipeline: Pipeline,
     odds_df: pd.DataFrame,
     betting_fnc: str = "spread_probs",
-    fixed_window_length: int = 5,
+    fixed_window_size: int = 5,
     file_name: str = None,
 ) -> tuple[Pipeline, pd.DataFrame]:
     """
@@ -70,14 +71,14 @@ def cross_validate(
         pipeline (Pipeline): Feature and model pipeline.
         odds_df (pd.DataFrame): DataFrame of betting lines and results.
         betting_fnc (str, optional): Function to determine bets. Defaults to "spread_probs".
-        fixed_window_length (int, optional): Seasons to train on. Defaults to 5.
+        fixed_window_size (int, optional): Seasons to train on. Defaults to 5.
         file_name (str, optional): Desired file name for model. Defaults to None.
 
     Returns:
         tuple[Pipeline, pd.DataFrame]: The total pipeline that has been fit and the bets made.
     """
     cv_split = RollingTimeSeriesSplit(
-        seasons=X["season"], fixed_window_length=fixed_window_length
+        seasons=X["season"], fixed_window_size=fixed_window_size
     )
     contrib_df_list = []
     betting_logic = BettingLogic(betting_fnc)
@@ -87,7 +88,6 @@ def cross_validate(
         X_train, y_train = X.iloc[train_idx], y.iloc[train_idx]
         X_test = X.iloc[test_idx]
         pipeline.fit(X_train, y_train)
-
         # Get predictions
         preds = pipeline.predict(X_test, pred_contrib=True)
         cols = pipeline.named_steps["light_gbm"].feature_name_ + ["bias"]
