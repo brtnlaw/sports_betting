@@ -201,6 +201,36 @@ def run_game_pipeline() -> Pipeline:
     return run_game_pipeline
 
 
+def special_pipeline() -> Pipeline:
+    special_pipeline = Pipeline(
+        [
+            (
+                "rolling_punt_yds_for",
+                RollingTransformer(
+                    "rolling_punt_yds_for",
+                    "home_punt_return_yards",
+                    "away_punt_return_yards",
+                    [1, 3, 5],
+                    1,
+                    "mean",
+                ),
+            ),
+            (
+                "rolling_punt_tds_for",
+                RollingTransformer(
+                    "rolling_punt_tds_for",
+                    "home_punt_return_tds",
+                    "away_punt_return_tds",
+                    [1, 3, 5],
+                    1,
+                    "mean",
+                ),
+            ),
+        ]
+    )
+    return special_pipeline
+
+
 def feature_pipeline() -> Pipeline:
     """
     Combines all types of features into one pipeline.

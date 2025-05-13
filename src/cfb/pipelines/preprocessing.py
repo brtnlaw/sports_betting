@@ -1,3 +1,4 @@
+from pipelines.feature_transformers.efficiency_transformer import EfficiencyTransformer
 from pipelines.feature_transformers.expand_efficiency_transformer import (
     ExpandEfficiencyTransformer,
 )
@@ -72,6 +73,17 @@ def get_preprocess_pipeline() -> Pipeline:
                 OneHotEncoder(sparse_output=False),
                 ["home_classification", "away_classification", "season_type"],
             ),
+        ],
+        remainder="passthrough",
+        verbose_feature_names_out=False,
+    )
+    col_transformers_4 = ColumnTransformer(
+        transformers=[
+            (
+                "home_passing_efficiency",
+                EfficiencyTransformer("home_receptions", "home_passes"),
+                ["home_receptions", "home_passes"],
+            )
         ],
         remainder="passthrough",
         verbose_feature_names_out=False,

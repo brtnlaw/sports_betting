@@ -304,11 +304,12 @@ def get_bucketed_wr_pnl(
         )
         # Only trades made
         odds_df = odds_df[odds_df["unit_pnl"] != 0]
-        odds_df["covered"] = 1 if odds_df["unit_pnl"] > 0 else -1
+        odds_df["covered"] = odds_df.apply(
+            lambda row: 1 if row["unit_pnl"] > 0 else -1, axis=1
+        )
         bucket_stats = (
-            odds_df.groupby("edge_bucket")
+            odds_df.groupby("edge_bucket", observed=False)
             .agg(win_rate=("covered", "mean"), count=("covered", "size"))
             .reset_index()
         )
-
-    pass
+    return bucket_stats
