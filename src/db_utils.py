@@ -97,7 +97,14 @@ def retrieve_data(schema: str, table: str) -> pd.DataFrame:
         pd.DataFrame: Desired data queried.
     """
     schema_tables = {
-        "cfb": ["games", "venues", "lines", "game_team_stats", "play_by_play"]
+        "cfb": [
+            "games",
+            "venues",
+            "lines",
+            "game_team_stats",
+            "play_by_play",
+            "advanced_game_stats",
+        ]
     }
     if schema not in schema_tables.keys():
         raise Exception(f"Select a schema in {schema_tables.keys()}")

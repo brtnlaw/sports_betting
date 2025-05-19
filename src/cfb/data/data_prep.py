@@ -52,6 +52,7 @@ class DataPrep:
         game_df = retrieve_data(self.dataset, "games")
         line_df = retrieve_data(self.dataset, "lines")
         game_team_stat_df = retrieve_data(self.dataset, "game_team_stats")
+        advanced_game_stat_df = retrieve_data(self.dataset, "advanced_game_stats")
 
         # Merge game and venue data on venue_id
         self.df = pd.merge(
@@ -87,7 +88,7 @@ class DataPrep:
                 offense AS team,
                 COUNT(CASE WHEN yards_gained >= 30 THEN 1 END) AS plays_30_plus,
                 COUNT(CASE WHEN yards_gained >= 35 THEN 1 END) AS plays_35_plus,
-                COUNT(CASE WHEN yards_gained >= 40 THEN 1 END) AS plays_40_plus,
+                COUNT(CASE WHEN yards_gained >= 40 THEN 1 END) AS plays_40_plus
             FROM
                 cfb.play_by_play
             GROUP BY
@@ -110,7 +111,18 @@ class DataPrep:
             for col in pbp_cols:
                 self.df.rename(columns={col: f"{side}_{col}"}, inplace=True)
             self.df.drop(columns=["team", "game_id"], inplace=True)
-        # NOTE: There's a separate PPA database, consider using that instead?
+
+        # Need to make everything into one row (home, away), then merge on game_id.
+        advanced_game_stat_df.drop(columns=["opponent", "season", "week"], inplace=True)
+        for side in ["home", "away"]:
+            side_ags = advanced_game_stat_df.add_prefix(f"{side}_")
+            side_ags.rename(columns={f"{side}_game_id": "game_id"}, inplace=True)
+            self.df = self.df.merge(
+                side_ags,
+                how="left",
+                left_on=["id", f"{side}_team"],
+                right_on=["game_id", f"{side}_team"],
+            )
 
     def remove_columns(self):
         """Remove truly unnecessary columns to simplify the dataset."""
