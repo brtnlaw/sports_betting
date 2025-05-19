@@ -1,7 +1,6 @@
 ## TODOs
 - [ ] Number of features
-- [ ] Make a super for all the data pulling classes
-- [ ] Duplicates in lines
+- [ ] CFBD Advanced Stats
 - [ ] Basic analysis on predicted edge (which allows)
     - [ ] Isotonic regression, useful for when I'm conditioning on my predicted spread
 

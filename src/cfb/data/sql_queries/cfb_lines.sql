@@ -21,5 +21,6 @@ CREATE TABLE
         over_under_open DECIMAL(4, 1),
         home_moneyline DECIMAL(7, 1),
         away_moneyline DECIMAL(7, 1),
+        PRIMARY KEY (id, provider),
         FOREIGN KEY (id) REFERENCES cfb.games (id) ON DELETE SET NULL
     );

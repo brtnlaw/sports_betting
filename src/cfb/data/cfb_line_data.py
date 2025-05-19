@@ -11,7 +11,7 @@ from cfbd.rest import ApiException
 from db_utils import insert_data_to_db
 
 
-# TODO: This is only using major markets. Future work necessarily must involve derivative markets (i.e. NCAAF halves). We will use this as a starting point.
+# TODO: This is only using major markets. Future work necessarily must involve derivative markets (i.e. NCAAF halves).
 class CFBLineData(CFBBase):
     """Handles fetching, storing, and uploading CFB game data. Also retrieves from PostgreSQL."""
 
@@ -129,7 +129,6 @@ class CFBLineData(CFBBase):
             VALUES %s
             ON CONFLICT DO NOTHING
         """
-        # TODO: line_id
         for year in range(start, end):
             print(f"Uploading lines data for {year}...")
             data = self.load_lines_from_pkl_at_year(year)
