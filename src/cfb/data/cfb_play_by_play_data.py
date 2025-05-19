@@ -13,6 +13,8 @@ from db_utils import insert_data_to_db
 
 
 class CFBPlayByPlayData(CFBBase):
+    """Handles fetching, storing, and uploading CFB play-by-play data. Also retrieves from PostgreSQL."""
+
     def __init__(self):
         """Loads the API keys, as well as configures the API connection to CFBD."""
         super().__init__()
@@ -56,6 +58,15 @@ class CFBPlayByPlayData(CFBBase):
             print(f"Error fetching games for {year}, week {week}: {e}")
 
     def _pbp_expand_to_df(self, play: Play) -> pd.DataFrame:
+        """
+        Expands Play to a DataFrame.
+
+        Args:
+            play (Play): Input Play object.
+
+        Returns:
+            pd.DataFrame: Play object as DataFrame.
+        """
         play_dict = play.dict()
         play_dict["clock_minutes"] = play_dict["clock"]["minutes"]
         play_dict["clock_seconds"] = play_dict["clock"]["seconds"]
@@ -66,7 +77,7 @@ class CFBPlayByPlayData(CFBBase):
         self, year: int, week: int
     ) -> pd.DataFrame:
         """
-        Loads the game team stats directly from the pkl.
+        Loads the play-by-play stats directly from the pkl.
 
         Args:
             year (int): Season.
@@ -125,7 +136,7 @@ class CFBPlayByPlayData(CFBBase):
 
     def upload_play_by_play_to_db(self, start: int = 2013, end: int = 2025) -> None:
         """
-        Uploads the game data from pkl to PostgreSQL.
+        Uploads the play-by-play data from pkl to PostgreSQL.
 
         Args:
             start (int): Start season.

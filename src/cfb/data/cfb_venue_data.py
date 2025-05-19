@@ -1,16 +1,11 @@
 import os
 import pickle as pkl
-import warnings
 
 import cfbd
 import pandas as pd
 from cfbd.rest import ApiException
-from dotenv import load_dotenv
 
 from db_utils import insert_data_to_db
-
-CFBD_API_KEY = os.getenv("CFBD_API_KEY")
-PROJECT_ROOT = os.getenv("PROJECT_ROOT", os.getcwd())
 
 
 class CFBVenueData:
@@ -18,18 +13,10 @@ class CFBVenueData:
 
     def __init__(self):
         """Loads the API keys, as well as configures the API connection to CFBD."""
-        load_dotenv()
-
-        warnings.simplefilter(action="ignore", category=FutureWarning)
-
+        super().__init__()
         self._pkl_path = os.path.join(
-            PROJECT_ROOT, f"src/cfb/data/pkl_files/venues.pkl"
+            self.project_root, f"src/cfb/data/pkl_files/venues.pkl"
         )
-        self.configuration = cfbd.Configuration(
-            host="https://apinext.collegefootballdata.com",
-            access_token=CFBD_API_KEY,
-        )
-        self.api_client = cfbd.ApiClient(self.configuration)
         self.api = cfbd.VenuesApi(self.api_client)
 
     def fetch_and_pickle_venues(self) -> None:

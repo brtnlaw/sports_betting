@@ -1,31 +1,21 @@
 import os
 import pickle as pkl
 import time
-import warnings
 
 import cfbd
 import pandas as pd
+from cfb_base import CFBBase
 from cfbd.rest import ApiException
-from dotenv import load_dotenv
 
 from db_utils import insert_data_to_db
 
-CFBD_API_KEY = os.getenv("CFBD_API_KEY")
-PROJECT_ROOT = os.getenv("PROJECT_ROOT", os.getcwd())
 
-
-class CFBGameData:
+class CFBGameData(CFBBase):
     """Handles fetching, storing, and uploading CFB game data. Also retrieves from PostgreSQL."""
 
     def __init__(self):
         """Loads the API keys, as well as configures the API connection to CFBD."""
-        load_dotenv()
-        warnings.simplefilter(action="ignore", category=FutureWarning)
-        self.configuration = cfbd.Configuration(
-            host="https://apinext.collegefootballdata.com",
-            access_token=CFBD_API_KEY,
-        )
-        self.api_client = cfbd.ApiClient(self.configuration)
+        super().__init__()
         self.api = cfbd.GamesApi(self.api_client)
 
     def _get_pkl_path(self, year: int) -> str:
@@ -39,7 +29,9 @@ class CFBGameData:
         Returns:
             str: Path to pkl file.
         """
-        return os.path.join(PROJECT_ROOT, f"src/cfb/data/pkl_files/games_{year}.pkl")
+        return os.path.join(
+            self.project_root, f"src/cfb/data/pkl_files/games_{year}.pkl"
+        )
 
     def fetch_and_pickle_games_at_year(self, year: int) -> None:
         """
