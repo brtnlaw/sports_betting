@@ -122,7 +122,7 @@ class DataPrep:
                 how="left",
                 left_on=["id", f"{side}_team"],
                 right_on=["game_id", f"{side}_team"],
-            )
+            ).drop(columns=["game_id"])
 
     def remove_columns(self):
         """Remove truly unnecessary columns to simplify the dataset."""
