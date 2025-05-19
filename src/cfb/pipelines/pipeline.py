@@ -135,6 +135,15 @@ def get_features_and_model_pipeline() -> Pipeline:
         "away_passes",
         "away_penalties",
         "away_penalty_yds",
+        # ------ Invented Future Looking ------
+        "home_plays_30_plus",
+        "home_plays_35_plus",
+        "home_plays_40_plus",
+        "away_plays_30_plus",
+        "away_plays_35_plus",
+        "away_plays_40_plus",
+        "home_receptions_efficiency",
+        "away_receptions_efficiency",
         # ------ Separate Future Looking ------
         "total",
     ]

@@ -87,7 +87,7 @@ class DataPrep:
                 offense AS team,
                 COUNT(CASE WHEN yards_gained >= 30 THEN 1 END) AS plays_30_plus,
                 COUNT(CASE WHEN yards_gained >= 35 THEN 1 END) AS plays_35_plus,
-                COUNT(CASE WHEN yards_gained >= 40 THEN 1 END) AS plays_40_plus
+                COUNT(CASE WHEN yards_gained >= 40 THEN 1 END) AS plays_40_plus,
             FROM
                 cfb.play_by_play
             GROUP BY
@@ -110,6 +110,7 @@ class DataPrep:
             for col in pbp_cols:
                 self.df.rename(columns={col: f"{side}_{col}"}, inplace=True)
             self.df.drop(columns=["team", "game_id"], inplace=True)
+        # NOTE: There's a separate PPA database, consider using that instead?
 
     def remove_columns(self):
         """Remove truly unnecessary columns to simplify the dataset."""

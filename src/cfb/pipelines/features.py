@@ -81,6 +81,17 @@ def offense_pipeline() -> Pipeline:
                     "away_points",
                 ),
             ),
+            (
+                "rolling_plays_40_plus_for",
+                RollingTransformer(
+                    "rolling_plays_40_plus_for",
+                    "home_plays_40_plus",
+                    "away_plays_40_plus",
+                    [1, 3, 5],
+                    1,
+                    "mean",
+                ),
+            ),
         ]
     )
     return offense_pipeline
@@ -161,6 +172,17 @@ def pass_game_pipeline() -> Pipeline:
                     "rolling_passing_tds",
                     "home_passing_tds",
                     "away_passing_tds",
+                    [1, 3, 5],
+                    1,
+                    "mean",
+                ),
+            ),
+            (
+                "rolling_receptions_efficiency",
+                RollingTransformer(
+                    "rolling_receptions_efficiency",
+                    "home_receptions_efficiency",
+                    "away_receptions_efficiency",
                     [1, 3, 5],
                     1,
                     "mean",

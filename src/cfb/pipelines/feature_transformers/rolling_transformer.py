@@ -84,7 +84,13 @@ class RollingTransformer(BaseEstimator, TransformerMixin):
         }
 
         for window_size in self.window_sizes:
-            rolling_col_name = f"rolling_{window_size}_{self.agg_func}_{self.new_col}"
+            # Maintain rolling somewhere in name
+            if self.new_col.startswith("rolling"):
+                rolling_col_name = f"{window_size}_{self.agg_func}_{self.new_col}"
+            else:
+                rolling_col_name = (
+                    f"rolling_{window_size}_{self.agg_func}_{self.new_col}"
+                )
             game_df[rolling_col_name] = (
                 game_df.groupby("team")[self.new_col]
                 .shift(1)

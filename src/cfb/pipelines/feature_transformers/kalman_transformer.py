@@ -93,7 +93,11 @@ class KalmanTransformer(BaseEstimator, TransformerMixin):
             subset=["start_date", "team"], keep="last", inplace=True
         )
 
-        kalman_col_name = f"kalman_{self.new_col}"
+        # Maintain kalman somewhere in name
+        if self.new_col.startswith("kalman"):
+            kalman_col_name = self.new_col
+        else:
+            kalman_col_name = f"kalman_{self.new_col}"
         game_df[kalman_col_name] = game_df.groupby("team")[self.new_col].transform(
             self._apply_kalman_filter
         )

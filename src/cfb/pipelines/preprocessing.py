@@ -83,7 +83,12 @@ def get_preprocess_pipeline() -> Pipeline:
                 "home_passing_efficiency",
                 EfficiencyTransformer("home_receptions", "home_passes"),
                 ["home_receptions", "home_passes"],
-            )
+            ),
+            (
+                "away_passing_efficiency",
+                EfficiencyTransformer("away_receptions", "away_passes"),
+                ["away_receptions", "away_passes"],
+            ),
         ],
         remainder="passthrough",
         verbose_feature_names_out=False,
