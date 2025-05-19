@@ -114,6 +114,7 @@ def get_preprocess_pipeline() -> Pipeline:
             ("quarter_total", QuartersTotalTransformer()),
             ("spread", SpreadTransformer()),
             ("expand_efficiency", ExpandEfficiencyTransformer()),
+            ("col_transformers_4", col_transformers_4),
         ]
     )
     return pipeline

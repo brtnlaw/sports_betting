@@ -1,5 +1,6 @@
 ## TODOs
 - [ ] Number of features
+- [ ] Play-by-play data pulling
 - [ ] Basic analysis on predicted edge (which allows)
     - [ ] Isotonic regression, useful for when I'm conditioning on my predicted spread
 

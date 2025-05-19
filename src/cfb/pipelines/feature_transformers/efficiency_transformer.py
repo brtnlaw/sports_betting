@@ -32,8 +32,8 @@ class EfficiencyTransformer(BaseEstimator, TransformerMixin):
         X_ = X.copy()
         X_[f"{self.success_col}_efficiency"] = X_.apply(
             lambda row: (
-                row[self.success_col] / row[self.total_col]
-                if row[self.total_col] != 0
+                row[self.success_col] / row[self.count_col]
+                if row[self.count_col] != 0
                 else 1
             ),
             axis=1,
