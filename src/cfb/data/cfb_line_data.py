@@ -137,6 +137,7 @@ class CFBLineData:
             VALUES %s
             ON CONFLICT DO NOTHING
         """
+        # TODO: line_id
         for year in range(start, end):
             print(f"Uploading lines data for {year}...")
             data = self.load_lines_from_pkl_at_year(year)
