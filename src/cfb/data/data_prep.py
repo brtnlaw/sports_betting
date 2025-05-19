@@ -2,9 +2,7 @@ import os
 
 import pandas as pd
 
-from db_utils import execute_sql_script, retrieve_data
-
-PROJECT_ROOT = os.getenv("PROJECT_ROOT", os.getcwd())
+from db_utils import execute_sql_script, pull_from_db, retrieve_data
 
 
 class DataPrep:
@@ -19,13 +17,14 @@ class DataPrep:
         Args:
             dataset (str, optional): The type of sport. Defaults to "cfb".
         """
+        self.project_root = os.getenv("PROJECT_ROOT", os.getcwd())
         self.dataset = dataset
         self.df = None
 
     # TODO: Fix the ordering
     def make_schemas_tables(self):
         """Generates all the schemas and tables, if they don't already exist."""
-        queries_path = os.path.join(PROJECT_ROOT, f"src/cfb/data/sql_queries/")
+        queries_path = os.path.join(self.project_root, f"src/cfb/data/sql_queries/")
         if os.path.isdir(queries_path):
             for patch_file in os.listdir(queries_path):
                 patch_path = os.path.join(queries_path, patch_file)
@@ -41,7 +40,7 @@ class DataPrep:
         retrieve_data(self.dataset, "venues")
         retrieve_data(self.dataset, "lines")
 
-        patches_path = os.path.join(PROJECT_ROOT, f"src/cfb/data/patches/")
+        patches_path = os.path.join(self.project_root, f"src/cfb/data/patches/")
         if os.path.isdir(patches_path):
             for patch_file in os.listdir(patches_path):
                 patch_path = os.path.join(patches_path, patch_file)
@@ -49,8 +48,8 @@ class DataPrep:
 
     def load_data(self):
         """Fetch game, venue, and odds data from the database or other sources."""
-        game_df = retrieve_data(self.dataset, "games")
         venue_df = retrieve_data(self.dataset, "venues")
+        game_df = retrieve_data(self.dataset, "games")
         line_df = retrieve_data(self.dataset, "lines")
         game_team_stat_df = retrieve_data(self.dataset, "game_team_stats")
 
@@ -72,20 +71,45 @@ class DataPrep:
         self.df = pd.merge(self.df, bet_df, how="left", on="id")
 
         # Merge box score data
-        home_gts = game_team_stat_df.add_prefix("home_")
-        away_gts = game_team_stat_df.add_prefix("away_")
-        self.df = self.df.merge(
-            home_gts,
-            how="left",
-            left_on=["id", "home_id", "home_team"],
-            right_on=["home_game_id", "home_team_id", "home_team"],
-        )
-        self.df = self.df.merge(
-            away_gts,
-            how="left",
-            left_on=["id", "away_id", "away_team"],
-            right_on=["away_game_id", "away_team_id", "away_team"],
-        )
+        for side in ["home", "away"]:
+            side_gts = game_team_stat_df.add_prefix(f"{side}_")
+            self.df = self.df.merge(
+                side_gts,
+                how="left",
+                left_on=["id", f"{side}_id", f"{side}_team"],
+                right_on=[f"{side}_game_id", f"{side}_team_id", f"{side}_team"],
+            )
+
+        # Get necessary stats from play-by-play
+        pbp_query = """
+            SELECT
+                game_id,
+                offense AS team,
+                COUNT(CASE WHEN yards_gained >= 30 THEN 1 END) AS plays_30_plus,
+                COUNT(CASE WHEN yards_gained >= 35 THEN 1 END) AS plays_35_plus,
+                COUNT(CASE WHEN yards_gained >= 40 THEN 1 END) AS plays_40_plus
+            FROM
+                cfb.play_by_play
+            GROUP BY
+                game_id,
+                offense
+            ORDER BY
+                game_id,
+                offense;
+            """
+        pbp_df = pull_from_db(pbp_query)
+        pbp_cols = [col for col in pbp_df.columns if col not in ("game_id", "team")]
+
+        for side in ["home", "away"]:
+            self.df = self.df.merge(
+                pbp_df,
+                how="left",
+                left_on=["id", f"{side}_team"],
+                right_on=["game_id", "team"],
+            )
+            for col in pbp_cols:
+                self.df.rename(columns={col: f"{side}_{col}"}, inplace=True)
+            self.df.drop(columns=["team", "game_id"], inplace=True)
 
     def remove_columns(self):
         """Remove truly unnecessary columns to simplify the dataset."""
@@ -108,7 +132,6 @@ class DataPrep:
             inplace=True,
         )
 
-    # TODO: venue -> game -> line -> game_team_data
     def get_data(self):
         """Returns the un-processed data for further transformations."""
         self.load_data()
