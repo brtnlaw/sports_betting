@@ -87,5 +87,5 @@ class CFBVenueData:
 
 if __name__ == "__main__":
     # python src/cfb/data/cfb_venue_data.py
-    pipeline = CFBVenueData()
-    pipeline.upload_venues_to_db()
+    instance = CFBVenueData()
+    instance.upload_venues_to_db()

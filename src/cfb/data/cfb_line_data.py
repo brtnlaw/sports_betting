@@ -13,7 +13,7 @@ from db_utils import insert_data_to_db
 
 # TODO: This is only using major markets. Future work necessarily must involve derivative markets (i.e. NCAAF halves).
 class CFBLineData(CFBBase):
-    """Handles fetching, storing, and uploading CFB game data. Also retrieves from PostgreSQL."""
+    """Handles fetching, storing, and uploading CFB line data. Also retrieves from PostgreSQL."""
 
     def __init__(self):
         """Loads the API keys, as well as configures the API connection to CFBD."""
@@ -138,5 +138,5 @@ class CFBLineData(CFBBase):
 
 if __name__ == "__main__":
     # python src/cfb/data/cfb_line_data.py
-    pipeline = CFBLineData()
-    pipeline.upload_lines_to_db()
+    instance = CFBLineData()
+    instance.upload_lines_to_db()

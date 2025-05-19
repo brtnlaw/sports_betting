@@ -136,5 +136,5 @@ class CFBGameData(CFBBase):
 
 if __name__ == "__main__":
     # python src/cfb/data/cfb_game_data.py
-    pipeline = CFBGameData()
-    pipeline.upload_games_to_db()
+    instance = CFBGameData()
+    instance.upload_games_to_db()

@@ -154,7 +154,7 @@ class CFBPlayByPlayData(CFBBase):
                     and week == 16
                 ):
                     continue
-                print(f"Uploading play_by_play stats for {year}, week {week}...")
+                print(f"Uploading play-by-play stats for {year}, week {week}...")
                 data = self.load_play_by_play_from_pkl_at_year_week(year, week)
                 insert_data_to_db(query, data)
                 time.sleep(0.5)
@@ -162,5 +162,5 @@ class CFBPlayByPlayData(CFBBase):
 
 if __name__ == "__main__":
     # python src/cfb/data/cfb_play_by_play_data.py
-    pipeline = CFBPlayByPlayData()
-    pipeline.upload_play_by_play_to_db()
+    instance = CFBPlayByPlayData()
+    instance.upload_play_by_play_to_db()

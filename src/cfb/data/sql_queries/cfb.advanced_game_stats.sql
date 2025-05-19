@@ -1,0 +1,75 @@
+CREATE TABLE IF NOT EXISTS cfb.advanced_game_stats (
+    game_id                                INT,
+    season                                 INT,
+    week                                   INT,
+    team                                   VARCHAR(100),
+    opponent                               VARCHAR(100),
+
+    offense_passing_plays_explosiveness    FLOAT,
+    offense_passing_plays_success_rate     FLOAT,
+    offense_passing_plays_total_ppa        FLOAT,
+    offense_passing_plays_ppa              FLOAT,
+
+    offense_rushing_plays_explosiveness    FLOAT,
+    offense_rushing_plays_success_rate     FLOAT,
+    offense_rushing_plays_total_ppa        FLOAT,
+    offense_rushing_plays_ppa              FLOAT,
+
+    offense_passing_downs_explosiveness    FLOAT,
+    offense_passing_downs_success_rate     FLOAT,
+    offense_passing_downs_ppa              FLOAT,
+
+    offense_standard_downs_explosiveness   FLOAT,
+    offense_standard_downs_success_rate    FLOAT,
+    offense_standard_downs_ppa             FLOAT,
+
+    offense_open_field_yards_total         FLOAT,
+    offense_open_field_yards               FLOAT,
+    offense_second_level_yards_total       FLOAT,
+    offense_second_level_yards             FLOAT,
+    offense_line_yards_total               FLOAT,
+    offense_line_yards                     FLOAT,
+    offense_stuff_rate                     FLOAT,
+    offense_power_success                  FLOAT,
+    offense_explosiveness                  FLOAT,
+    offense_success_rate                   FLOAT,
+    offense_total_ppa                      FLOAT,
+    offense_ppa                            FLOAT,
+    offense_drives                         INT,
+    offense_plays                          INT,
+
+    defense_passing_plays_explosiveness    FLOAT,
+    defense_passing_plays_success_rate     FLOAT,
+    defense_passing_plays_total_ppa        FLOAT,
+    defense_passing_plays_ppa              FLOAT,
+
+    defense_rushing_plays_explosiveness    FLOAT,
+    defense_rushing_plays_success_rate     FLOAT,
+    defense_rushing_plays_total_ppa        FLOAT,
+    defense_rushing_plays_ppa              FLOAT,
+
+    defense_passing_downs_explosiveness    FLOAT,
+    defense_passing_downs_success_rate     FLOAT,
+    defense_passing_downs_ppa              FLOAT,
+
+    defense_standard_downs_explosiveness   FLOAT,
+    defense_standard_downs_success_rate    FLOAT,
+    defense_standard_downs_ppa             FLOAT,
+
+    defense_open_field_yards_total         FLOAT,
+    defense_open_field_yards               FLOAT,
+    defense_second_level_yards_total       FLOAT,
+    defense_second_level_yards             FLOAT,
+    defense_line_yards_total               FLOAT,
+    defense_line_yards                     FLOAT,
+    defense_stuff_rate                     FLOAT,
+    defense_power_success                  FLOAT,
+    defense_explosiveness                  FLOAT,
+    defense_success_rate                   FLOAT,
+    defense_total_ppa                      FLOAT,
+    defense_ppa                            FLOAT,
+    defense_drives                         INT,
+    defense_plays                          INT,
+    PRIMARY KEY (game_id, team)
+    FOREIGN KEY (game_id) REFERENCES cfb.games(id) ON DELETE SET NULL
+);
