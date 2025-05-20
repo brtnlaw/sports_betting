@@ -348,15 +348,13 @@ def feature_pipeline() -> Pipeline:
             ("run_game_pipeline", run_game_pipeline()),
             ("special_teams_pipeline", special_teams_pipeline()),
             (
-                "net_ppa",
+                "net_5_mean_rolling_ppa",
                 NetTransformer(
                     [
                         "home_5_mean_rolling_offense_ppa",
-                        "home_5_mean_rolling_defense_ppa",
                     ],
                     [
                         "away_5_mean_rolling_offense_ppa",
-                        "away_5_mean_rolling_defense_ppa",
                     ],
                     "net_5_mean_rolling_ppa",
                     True,

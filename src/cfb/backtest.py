@@ -83,11 +83,21 @@ def cross_validate(
     contrib_df_list = []
     betting_logic = BettingLogic(betting_fnc)
 
+    # Initial train split
+    first_split = True
+    odds_df["is_train"] = False
+
     for train_idx, test_idx in cv_split.split(X, y):
         # Train-test split
         X_train, y_train = X.iloc[train_idx], y.iloc[train_idx]
         X_test = X.iloc[test_idx]
         pipeline.fit(X_train, y_train)
+        if first_split:
+            odds_df.iloc[train_idx, odds_df.columns.get_loc("pred")] = pipeline.predict(
+                X_train
+            )
+            odds_df.iloc[train_idx, odds_df.columns.get_loc("is_train")] = True
+            first_split = False
         # Get predictions
         preds = pipeline.predict(X_test, pred_contrib=True)
         cols = pipeline.named_steps["light_gbm"].feature_name_ + ["bias"]

@@ -54,5 +54,5 @@ class NetTransformer(BaseEstimator, TransformerMixin):
                 root = self.home_col.split("away_")[1]
                 col_name = f"net_{root}"
         X_[col_name] = X_[self.home_cols].sum(axis=1) - X_[self.away_cols].sum(axis=1)
-        X_.drop(self.home_cols + self.away_cols, axis=1, inplace=True)
+        X_.drop(columns=(self.home_cols + self.away_cols), axis=1, inplace=True)
         return X_

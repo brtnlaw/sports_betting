@@ -14,7 +14,6 @@ PROJECT_ROOT = os.getenv("PROJECT_ROOT", os.getcwd())
 pd.set_option("future.no_silent_downcasting", True)
 
 
-# TODO: Bias?
 def get_model_interpretability(
     model_str: str,
     target_str: str = "home_away_spread",
@@ -92,7 +91,7 @@ def plot_pnl(
     plot_model_df.reset_index(drop=True, inplace=True)
 
     plt.plot(
-        plot_model_df["unit_pnl"].cumsum() + 100,
+        plot_model_df[plot_model_df["is_train"] == False]["unit_pnl"].cumsum() + 100,
         label=f"{model_str}_{target_str}_{betting_fnc}",
     )
     plt.xlabel("Games")
@@ -133,11 +132,12 @@ def plot_pnl_comparison(
     plot_baseline_df.reset_index(drop=True, inplace=True)
 
     plt.plot(
-        plot_model_df["unit_pnl"].cumsum() + 100,
+        plot_model_df[plot_model_df["is_train"] == False]["unit_pnl"].cumsum() + 100,
         label=f"{model_str}_{target_str}_{betting_fncs[0]}",
     )
     plt.plot(
-        plot_baseline_df["unit_pnl"].cumsum() + 100,
+        plot_baseline_df[plot_baseline_df["is_train"] == False]["unit_pnl"].cumsum()
+        + 100,
         label=f"{baseline_str}_{target_str}_{betting_fncs[1]}",
     )
     plt.xlabel("Games")
@@ -169,47 +169,71 @@ def get_pred_metrics(
         pd.DataFrame: DataFrame with different model metrics. Includes the book metrics.
     """
     model_df = load_pkl_if_exists(model_str, target_str, betting_fnc, "odds_df")
+    sharpe = net_pnl = max_drawdown = num_bets = percent_winning = 0
+
     if is_book:
         assert betting_cols, "Need betting cols for book lines."
         model_df.dropna(inplace=True, subset=[target_str] + list(betting_cols))
         y_hat = model_df[list(betting_cols)].mean(axis=1)
+        y = model_df[target_str].values
+
+        mae = mean_absolute_error(y, y_hat)
+        mse = mean_squared_error(y, y_hat)
+        r2 = r2_score(y, y_hat)
+        metrics = {
+            "Mean Average Error": mae,
+            "Mean Squared Error": mse,
+            "R-Squared": r2,
+            "Sharpe": sharpe,
+            "Net PNL": net_pnl,
+            "Max Drawdown": max_drawdown,
+            "Number of Bets": num_bets,
+            "Winning Bet %": percent_winning,
+        }
+        index_name = "book"
+        metric_df = pd.DataFrame(metrics, index=[index_name])
+        metric_df.index.name = "model"
+        return metric_df
     else:
-        model_df.dropna(inplace=True, subset=[target_str, "pred"])
-        y_hat = model_df["pred"].values
-    y = model_df[target_str].values
+        rows = []
+        for label, condition in [
+            ("TRAIN", model_df["is_train"] == True),
+            ("TEST", model_df["is_train"] == False),
+        ]:
+            subset = model_df[condition].dropna(subset=[target_str, "pred"])
+            y = subset[target_str].values
+            y_hat = subset["pred"].values
 
-    mae = mean_absolute_error(y, y_hat)
-    mse = mean_squared_error(y, y_hat)
-    r2 = r2_score(y, y_hat)
+            mae = mean_absolute_error(y, y_hat)
+            mse = mean_squared_error(y, y_hat)
+            r2 = r2_score(y, y_hat)
+            if label == "TEST":
+                bet_results = subset["unit_pnl"].dropna()
+                bet_results = bet_results[bet_results != 0]
+                total_units = bet_results.cumsum() + 100
+                net_pnl = bet_results.sum()
+                sharpe = net_pnl / total_units.std() if total_units.std() > 0 else 0
+                max_drawdown = min(bet_results.cumsum())
+                percent_winning = (bet_results > 0).mean()
+                num_bets = bet_results.count()
 
-    if is_book:
-        sharpe, net_pnl, max_drawdown, num_bets, percent_winning = (0, 0, 0, 0, 0)
-    else:
-        bet_results = model_df["unit_pnl"].dropna()
-        bet_results = bet_results[bet_results != 0]
-        total_units = bet_results.cumsum() + 100
-        net_pnl = bet_results.sum()
+            metrics = {
+                "Mean Average Error": mae,
+                "Mean Squared Error": mse,
+                "R-Squared": r2,
+                "Sharpe": sharpe,
+                "Net PNL": net_pnl,
+                "Max Drawdown": max_drawdown,
+                "Number of Bets": num_bets,
+                "Winning Bet %": percent_winning,
+            }
+            index_name = f"{label}_{model_str}_{target_str}_{betting_fnc}"
+            row_df = pd.DataFrame(metrics, index=[index_name])
+            row_df.index.name = "model"
+            rows.append(row_df)
 
-        sharpe = net_pnl / total_units.std()
-
-        max_drawdown = min(bet_results.cumsum())
-        percent_winning = (bet_results > 0).sum() / len(bet_results)
-        num_bets = (bet_results != 0).sum()
-
-    metrics = {
-        "Mean Average Error": mae,
-        "Mean Squared Error": mse,
-        "R-Squared": r2,
-        "Sharpe": sharpe,
-        "Net PNL": net_pnl,
-        "Max Drawdown": max_drawdown,
-        "Number of Bets": num_bets,
-        "Winning Bet %": percent_winning,
-    }
-    index_name = "book" if is_book else f"{model_str}_{target_str}_{betting_fnc}"
-    metric_df = pd.DataFrame(metrics, index=[index_name])
-    metric_df.index.name = "model"
-    return metric_df
+        metric_df = pd.concat(rows)
+        return metric_df
 
 
 def plot_model_metrics(
