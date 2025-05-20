@@ -3,6 +3,7 @@
 - [ ] CFBD Advanced Stats
 - [ ] Basic analysis on predicted edge (which allows)
     - [ ] Isotonic regression, useful for when I'm conditioning on my predicted spread
+- [ ] Train metrics?
 
 ## Shelved for later
 - [ ] Obtain basic historical market data with payouts

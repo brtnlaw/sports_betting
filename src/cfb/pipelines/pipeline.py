@@ -34,6 +34,9 @@ def get_features_and_model_pipeline() -> Pipeline:
         "constructionyear",
         "elevation",
         "capacity",
+        "attendance",
+        "home_pregame_elo",
+        "away_pregame_elo",
         # ------ Genned Columns ------
         "team_away",
         "previous_game",
@@ -256,7 +259,7 @@ def get_features_and_model_pipeline() -> Pipeline:
         "away_defense_total_ppa",
         "away_defense_ppa",
         "away_defense_drives",
-        "away_defense_plays"
+        "away_defense_plays",
         # ------ Separate Future Looking ------
         "total",
     ]

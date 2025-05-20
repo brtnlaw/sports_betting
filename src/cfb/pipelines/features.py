@@ -2,6 +2,7 @@ from pipelines.feature_transformers.days_since_last_game_transformer import (
     DaysSinceLastGameTransformer,
 )
 from pipelines.feature_transformers.kalman_transformer import KalmanTransformer
+from pipelines.feature_transformers.net_transformer import NetTransformer
 from pipelines.feature_transformers.rolling_transformer import RollingTransformer
 from sklearn import set_config
 from sklearn.pipeline import Pipeline
@@ -92,6 +93,36 @@ def offense_pipeline() -> Pipeline:
                     "mean",
                 ),
             ),
+            (
+                "rolling_offense_ppa",
+                RollingTransformer(
+                    "rolling_offense_ppa",
+                    "home_offense_ppa",
+                    "away_offense_ppa",
+                    [1, 3, 5],
+                    1,
+                    "mean",
+                ),
+            ),
+            (
+                "kalman_offense_explosiveness",
+                KalmanTransformer(
+                    "kalman_offense_explosiveness",
+                    "home_offense_explosiveness",
+                    "away_offense_explosiveness",
+                ),
+            ),
+            (
+                "rolling_offense_success_rate",
+                RollingTransformer(
+                    "rolling_offense_success_rate",
+                    "home_offense_success_rate",
+                    "away_offense_success_rate",
+                    [1, 3, 5],
+                    1,
+                    "mean",
+                ),
+            ),
         ]
     )
     return offense_pipeline
@@ -136,12 +167,48 @@ def defense_pipeline() -> Pipeline:
                     "home_points",
                 ),
             ),
+            (
+                "rolling_defense_ppa",
+                RollingTransformer(
+                    "rolling_defense_ppa",
+                    "home_defense_ppa",
+                    "away_defense_ppa",
+                    [1, 3, 5],
+                    1,
+                    "mean",
+                ),
+            ),
+            (
+                "kalman_defense_explosiveness",
+                KalmanTransformer(
+                    "kalman_defense_explosiveness",
+                    "home_defense_explosiveness",
+                    "away_defense_explosiveness",
+                ),
+            ),
+            (
+                "rolling_defense_success_rate",
+                RollingTransformer(
+                    "rolling_defense_success_rate",
+                    "home_defense_success_rate",
+                    "away_defense_success_rate",
+                    [1, 3, 5],
+                    1,
+                    "mean",
+                ),
+            ),
         ]
     )
     return defense_pipeline
 
 
 def pass_game_pipeline() -> Pipeline:
+    """
+    Pipeline for all pass game features.
+
+    Returns:
+        Pipeline: Pipeline with pass game features.
+    """
     pass_game_pipeline = Pipeline(
         [
             (
@@ -194,6 +261,12 @@ def pass_game_pipeline() -> Pipeline:
 
 
 def run_game_pipeline() -> Pipeline:
+    """
+    Pipeline for all run game features.
+
+    Returns:
+        Pipeline: Pipeline with run game features.
+    """
     run_game_pipeline = Pipeline(
         [
             (
@@ -223,8 +296,14 @@ def run_game_pipeline() -> Pipeline:
     return run_game_pipeline
 
 
-def special_pipeline() -> Pipeline:
-    special_pipeline = Pipeline(
+def special_teams_pipeline() -> Pipeline:
+    """
+    Pipeline for all special teams features.
+
+    Returns:
+        Pipeline: Pipeline with special teams features.
+    """
+    special_teams_pipeline = Pipeline(
         [
             (
                 "rolling_punt_yds_for",
@@ -250,7 +329,7 @@ def special_pipeline() -> Pipeline:
             ),
         ]
     )
-    return special_pipeline
+    return special_teams_pipeline
 
 
 def feature_pipeline() -> Pipeline:
@@ -267,6 +346,22 @@ def feature_pipeline() -> Pipeline:
             ("defense_pipeline", defense_pipeline()),
             ("pass_game_pipeline", pass_game_pipeline()),
             ("run_game_pipeline", run_game_pipeline()),
+            ("special_teams_pipeline", special_teams_pipeline()),
+            (
+                "net_ppa",
+                NetTransformer(
+                    [
+                        "home_5_mean_rolling_offense_ppa",
+                        "home_5_mean_rolling_defense_ppa",
+                    ],
+                    [
+                        "away_5_mean_rolling_offense_ppa",
+                        "away_5_mean_rolling_defense_ppa",
+                    ],
+                    "net_5_mean_rolling_ppa",
+                    True,
+                ),
+            ),
         ]
     )
     return pipeline

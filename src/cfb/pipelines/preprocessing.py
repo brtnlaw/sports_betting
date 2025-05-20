@@ -5,6 +5,7 @@ from pipelines.feature_transformers.expand_efficiency_transformer import (
 from pipelines.feature_transformers.group_mean_imputer import GroupMeanImputer
 from pipelines.feature_transformers.group_mode_imputer import GroupModeImputer
 from pipelines.feature_transformers.multiple_value_imputer import MultipleValueImputer
+from pipelines.feature_transformers.net_transformer import NetTransformer
 from pipelines.feature_transformers.quarters_total_transformer import (
     QuartersTotalTransformer,
 )

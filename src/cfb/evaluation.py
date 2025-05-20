@@ -14,6 +14,7 @@ PROJECT_ROOT = os.getenv("PROJECT_ROOT", os.getcwd())
 pd.set_option("future.no_silent_downcasting", True)
 
 
+# TODO: Bias?
 def get_model_interpretability(
     model_str: str,
     target_str: str = "home_away_spread",
