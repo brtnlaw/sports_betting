@@ -207,15 +207,14 @@ def get_pred_metrics(
             mae = mean_absolute_error(y, y_hat)
             mse = mean_squared_error(y, y_hat)
             r2 = r2_score(y, y_hat)
-            if label == "TEST":
-                bet_results = subset["unit_pnl"].dropna()
-                bet_results = bet_results[bet_results != 0]
-                total_units = bet_results.cumsum() + 100
-                net_pnl = bet_results.sum()
-                sharpe = net_pnl / total_units.std() if total_units.std() > 0 else 0
-                max_drawdown = min(bet_results.cumsum())
-                percent_winning = (bet_results > 0).mean()
-                num_bets = bet_results.count()
+            bet_results = subset["unit_pnl"].dropna()
+            bet_results = bet_results[bet_results != 0]
+            total_units = bet_results.cumsum() + 100
+            net_pnl = bet_results.sum()
+            sharpe = net_pnl / total_units.std() if total_units.std() > 0 else 0
+            max_drawdown = min(bet_results.cumsum())
+            percent_winning = (bet_results > 0).mean()
+            num_bets = bet_results.count()
 
             metrics = {
                 "Mean Average Error": mae,

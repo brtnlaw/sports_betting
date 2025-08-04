@@ -133,7 +133,7 @@ def cross_validate(
             search.fit(X_train_val, y_train_val)
             cv_pipeline = search.best_estimator_
             end = time.time()
-            print(f"Hyperparameter tuning took {end-start:.2f} seconds")
+            print(f"Hyperparameter tuning took {end-start:.1f} seconds...")
         else:
             cv_pipeline = pipeline
 
@@ -141,15 +141,14 @@ def cross_validate(
         start = time.time()
         cv_pipeline.fit(X_train_val, y_train_val)
         end = time.time()
-        print(f"Train data fitting took {end-start:.2f} seconds")
+        print(f"Train data fitting took {end-start:.1f} seconds...")
 
         # If this is the first split, we denote that it's a training prediction before saving df
         if first_split:
-            odds_df.iloc[train_val_idx, odds_df.columns.get_loc("pred")] = (
-                cv_pipeline.predict(X_train_val)
-            )
+            train_preds = cv_pipeline.predict(X_train_val)
             # is_train inclusive of validation, proxy for data points we will see
             # Used for the train-test metrics
+            odds_df.iloc[train_val_idx, odds_df.columns.get_loc("pred")] = train_preds
             odds_df.iloc[train_val_idx, odds_df.columns.get_loc("is_train")] = True
             first_split = False
 
@@ -157,7 +156,7 @@ def cross_validate(
         start = time.time()
         preds = cv_pipeline.predict(X_test, pred_contrib=True)
         end = time.time()
-        print(f"Test predicting took {end-start:.2f} seconds")
+        print(f"Test predicting took {end-start:.1f} seconds...")
         cols = cv_pipeline.named_steps["light_gbm"].feature_name_ + ["bias"]
         contrib_df_list.append(
             pd.DataFrame(preds[:, :], columns=cols, index=X_test.index)
@@ -238,4 +237,4 @@ if __name__ == "__main__":
 
     end = time.time()
     print("Success!")
-    print(f"Elapsed time: {end - start:.2f} seconds")
+    print(f"Total elapsed time: {end - start:.1f} seconds")
