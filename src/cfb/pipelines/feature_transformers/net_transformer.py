@@ -12,7 +12,6 @@ class NetTransformer(BaseEstimator, TransformerMixin):
         home_cols: Union[str, List[str]],
         away_cols: Union[str, List[str]],
         new_col: str = None,
-        drop_original: bool = True,
     ):
         """
         Sums up all the home_cols and all the away_cols, then nets.

@@ -357,7 +357,6 @@ def feature_pipeline() -> Pipeline:
                         "away_5_mean_rolling_offense_ppa",
                     ],
                     "net_5_mean_rolling_ppa",
-                    True,
                 ),
             ),
         ]

@@ -11,6 +11,7 @@
 - [ ] Obtain market data for derivative lines  
 - [ ] Obtain weather data
 - [ ] Obtain CLV, another simple metric for whether or not my preds are any good
+- [ ] Some model stacking + representation learning 
 
 ## Ideas
 - "Explosiveness"

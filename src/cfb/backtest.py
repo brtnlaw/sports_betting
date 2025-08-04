@@ -9,7 +9,7 @@ import pandas as pd
 from data.data_prep import DataPrep
 from pipelines.pipeline import get_features_and_model_pipeline
 from pipelines.preprocessing import get_preprocess_pipeline
-from sklearn.model_selection import BaseCrossValidator
+from sklearn.model_selection import BaseCrossValidator, GridSearchCV
 from sklearn.pipeline import Pipeline
 from strategy.betting_logic import BettingLogic
 
@@ -21,7 +21,10 @@ PROJECT_ROOT = os.getenv("PROJECT_ROOT", os.getcwd())
 
 
 class RollingTimeSeriesSplit(BaseCrossValidator):
-    """Custom rolling cross-validator that rolls over the training window by season, to avoid model drift."""
+    """
+    Custom rolling cross-validator that rolls over the training window by season, to avoid model drift.
+    Example: Train on 2018-2022, test on 2023, then train on 2019-2023, test on 2024, then train on 2020-2024, test on 2025.
+    """
 
     def __init__(self, seasons: pd.Series, fixed_window_size: int = 5):
         """
@@ -57,7 +60,8 @@ def cross_validate(
     pipeline: Pipeline,
     odds_df: pd.DataFrame,
     betting_fnc: str = "spread_probs",
-    fixed_window_size: int = 5,
+    train_window_size: int = 4,
+    validation_window_size: int = 1,
     file_name: str = None,
 ) -> tuple[Pipeline, pd.DataFrame]:
     """
@@ -71,14 +75,16 @@ def cross_validate(
         pipeline (Pipeline): Feature and model pipeline.
         odds_df (pd.DataFrame): DataFrame of betting lines and results.
         betting_fnc (str, optional): Function to determine bets. Defaults to "spread_probs".
-        fixed_window_size (int, optional): Seasons to train on. Defaults to 5.
+        train_window_size (int, optional): Seasons to train on. Defaults to 5.
+        validation_window_size (int, optional): Seasons to validate on. Defaults to 1.
         file_name (str, optional): Desired file name for model. Defaults to None.
 
     Returns:
         tuple[Pipeline, pd.DataFrame]: The total pipeline that has been fit and the bets made.
     """
-    cv_split = RollingTimeSeriesSplit(
-        seasons=X["season"], fixed_window_size=fixed_window_size
+    train_test_split = RollingTimeSeriesSplit(
+        seasons=X["season"],
+        fixed_window_size=train_window_size + validation_window_size,
     )
     contrib_df_list = []
     betting_logic = BettingLogic(betting_fnc)
@@ -87,36 +93,70 @@ def cross_validate(
     first_split = True
     odds_df["is_train"] = False
 
-    for train_idx, test_idx in cv_split.split(X, y):
-        # Train-test split
-        X_train, y_train = X.iloc[train_idx], y.iloc[train_idx]
+    # TODO: Update parameter grid https://lightgbm.readthedocs.io/en/latest/Parameters-Tuning.html
+    param_grid = [
+        {
+            "light_gbm__learning_rate": [0.05],
+            "light_gbm__num_leaves": [31],
+        },
+    ]
+
+    # Rolls the training window to accumulate years
+    fold = 1
+    for train_val_idx, test_idx in train_test_split.split(X, y):
+        # (Train-validation)-test split
+        X_train_val, y_train_val = X.iloc[train_val_idx], y.iloc[train_val_idx]
         X_test = X.iloc[test_idx]
-        pipeline.fit(X_train, y_train)
+
+        # Separate the train_val into training and validation to do hyperparameter search
+        train_val_split = RollingTimeSeriesSplit(
+            seasons=X_train_val["season"], fixed_window_size=train_window_size
+        )
+        search = GridSearchCV(
+            estimator=pipeline,
+            param_grid=param_grid,
+            cv=train_val_split,
+            scoring="neg_mean_squared_error",
+            n_jobs=-1,
+        )
+        # NOTE: Include year?
+        print(f"Performing hyperparameter search on fold {fold}...")
+        search.fit(X_train_val, y_train_val)
+        cv_pipeline = search.best_estimator_
+
+        # Potential TODO: save the validation error of the best estimators?
+        cv_pipeline.fit(X_train_val, y_train_val)
+
+        # If this is the first split, we denote that it's a training prediction before saving df
         if first_split:
-            odds_df.iloc[train_idx, odds_df.columns.get_loc("pred")] = pipeline.predict(
-                X_train
+            odds_df.iloc[train_val_idx, odds_df.columns.get_loc("pred")] = (
+                cv_pipeline.predict(X_train_val)
             )
-            odds_df.iloc[train_idx, odds_df.columns.get_loc("is_train")] = True
+            # is_train inclusive of validation, proxy for data points we will see
+            # Used for the train-test metrics
+            odds_df.iloc[train_val_idx, odds_df.columns.get_loc("is_train")] = True
             first_split = False
-        # Get predictions
-        preds = pipeline.predict(X_test, pred_contrib=True)
-        cols = pipeline.named_steps["light_gbm"].feature_name_ + ["bias"]
+
+        # Get predictions to odds_df, appends feature contributions
+        preds = cv_pipeline.predict(X_test, pred_contrib=True)
+        cols = cv_pipeline.named_steps["light_gbm"].feature_name_ + ["bias"]
         contrib_df_list.append(
             pd.DataFrame(preds[:, :], columns=cols, index=X_test.index)
         )
         odds_df.iloc[test_idx, odds_df.columns.get_loc("pred")] = preds.sum(axis=1)
 
+        fold += 1
+
     contrib_df = pd.concat(contrib_df_list).sort_index()
     odds_df = betting_logic.apply_bets(odds_df)
 
-    # Save the entire pipeline
     if not file_name:
         td = dt.datetime.today()
         file_name = f"model_{td.month}_{td.day}_{td.year%100}"
 
     # Save the pipeline and odds_df with the betting fnc name
     joblib.dump(
-        pipeline,
+        cv_pipeline,
         os.path.join(PROJECT_ROOT, f"src/cfb/models/{file_name}_{y.name}_pipeline.pkl"),
     )
     joblib.dump(
@@ -175,7 +215,6 @@ if __name__ == "__main__":
         cross_val_kwargs["file_name"] = args.name
     if args.betting_fnc is not None:
         cross_val_kwargs["betting_fnc"] = args.betting_fnc
-
     model, odds_df = cross_validate(X, y, pipeline, odds_df, **cross_val_kwargs)
 
     print("Success!")
