@@ -1,15 +1,18 @@
 import argparse
 import datetime as dt
 import os
+import time
 import warnings
 
 import joblib
 import numpy as np
 import pandas as pd
 from data.data_prep import DataPrep
+from flaml.tune import SearchCV
 from pipelines.pipeline import get_features_and_model_pipeline
 from pipelines.preprocessing import get_preprocess_pipeline
-from sklearn.model_selection import BaseCrossValidator, GridSearchCV
+from scipy.stats import randint
+from sklearn.model_selection import BaseCrossValidator, RandomizedSearchCV
 from sklearn.pipeline import Pipeline
 from strategy.betting_logic import BettingLogic
 
@@ -93,17 +96,19 @@ def cross_validate(
     first_split = True
     odds_df["is_train"] = False
 
-    # TODO: Update parameter grid https://lightgbm.readthedocs.io/en/latest/Parameters-Tuning.html
-    param_grid = [
+    # Hyperparameter distributions for LightGBM
+    param_distributions = [
         {
-            "light_gbm__learning_rate": [0.05],
-            "light_gbm__num_leaves": [31],
+            "light_gbm__learning_rate": [0.01, 0.05, 0.1],
+            "light_gbm__num_leaves": randint(30, 100),
+            "light_gbm__max_depth": randint(3, 10),
         },
     ]
 
     # Rolls the training window to accumulate years
     fold = 1
     for train_val_idx, test_idx in train_test_split.split(X, y):
+        print(f"Beginning fold {fold}...")
         # (Train-validation)-test split
         X_train_val, y_train_val = X.iloc[train_val_idx], y.iloc[train_val_idx]
         X_test = X.iloc[test_idx]
@@ -112,20 +117,25 @@ def cross_validate(
         train_val_split = RollingTimeSeriesSplit(
             seasons=X_train_val["season"], fixed_window_size=train_window_size
         )
-        search = GridSearchCV(
+        search = RandomizedSearchCV(
             estimator=pipeline,
-            param_grid=param_grid,
+            param_distributions=param_distributions,
+            n_iter=1,
             cv=train_val_split,
             scoring="neg_mean_squared_error",
             n_jobs=-1,
         )
-        # NOTE: Include year?
-        print(f"Performing hyperparameter search on fold {fold}...")
+        start = time.time()
         search.fit(X_train_val, y_train_val)
         cv_pipeline = search.best_estimator_
+        end = time.time()
+        print(f"Hyperparameter tuning took {end-start:.2f} seconds")
 
-        # Potential TODO: save the validation error of the best estimators?
+        # NOTE: Can consider storing validation error, but not necessary
+        start = time.time()
         cv_pipeline.fit(X_train_val, y_train_val)
+        end = time.time()
+        print(f"Train data fitting took {end-start:.2f} seconds")
 
         # If this is the first split, we denote that it's a training prediction before saving df
         if first_split:
@@ -138,13 +148,15 @@ def cross_validate(
             first_split = False
 
         # Get predictions to odds_df, appends feature contributions
+        start = time.time()
         preds = cv_pipeline.predict(X_test, pred_contrib=True)
+        end = time.time()
+        print(f"Test predicting took {end-start:.2f} seconds")
         cols = cv_pipeline.named_steps["light_gbm"].feature_name_ + ["bias"]
         contrib_df_list.append(
             pd.DataFrame(preds[:, :], columns=cols, index=X_test.index)
         )
         odds_df.iloc[test_idx, odds_df.columns.get_loc("pred")] = preds.sum(axis=1)
-
         fold += 1
 
     contrib_df = pd.concat(contrib_df_list).sort_index()
@@ -180,6 +192,7 @@ if __name__ == "__main__":
     python src/cfb/backtest.py --name "baseline"
     python src/cfb/backtest.py --name "baseline" --betting_fnc "spread_probs"
     """
+    start = time.time()
 
     parser = argparse.ArgumentParser()
     parser.add_argument("--name", type=str, help="Model file name to save.")
@@ -217,4 +230,6 @@ if __name__ == "__main__":
         cross_val_kwargs["betting_fnc"] = args.betting_fnc
     model, odds_df = cross_validate(X, y, pipeline, odds_df, **cross_val_kwargs)
 
+    end = time.time()
     print("Success!")
+    print(f"Elapsed time: {end - start:.2f} seconds")
