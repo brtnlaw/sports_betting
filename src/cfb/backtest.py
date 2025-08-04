@@ -8,7 +8,6 @@ import joblib
 import numpy as np
 import pandas as pd
 from data.data_prep import DataPrep
-from flaml.tune import SearchCV
 from pipelines.pipeline import get_features_and_model_pipeline
 from pipelines.preprocessing import get_preprocess_pipeline
 from scipy.stats import randint
@@ -63,9 +62,10 @@ def cross_validate(
     pipeline: Pipeline,
     odds_df: pd.DataFrame,
     betting_fnc: str = "spread_probs",
-    train_window_size: int = 4,
-    validation_window_size: int = 1,
+    train_window_size: int = 5,
+    validation_window_size: int = 0,
     file_name: str = None,
+    hyperparam_tuning=False,
 ) -> tuple[Pipeline, pd.DataFrame]:
     """
     Cross validates according to splits selected by RollingTimeSeriesSplit above. More specifically,
@@ -81,6 +81,7 @@ def cross_validate(
         train_window_size (int, optional): Seasons to train on. Defaults to 5.
         validation_window_size (int, optional): Seasons to validate on. Defaults to 1.
         file_name (str, optional): Desired file name for model. Defaults to None.
+        hyperparam_tuning (bool, optional): Whether or not to tune hyperparameters.
 
     Returns:
         tuple[Pipeline, pd.DataFrame]: The total pipeline that has been fit and the bets made.
@@ -97,13 +98,14 @@ def cross_validate(
     odds_df["is_train"] = False
 
     # Hyperparameter distributions for LightGBM
-    param_distributions = [
-        {
-            "light_gbm__learning_rate": [0.01, 0.05, 0.1],
-            "light_gbm__num_leaves": randint(30, 100),
-            "light_gbm__max_depth": randint(3, 10),
-        },
-    ]
+    if hyperparam_tuning:
+        param_distributions = [
+            {
+                "light_gbm__learning_rate": [0.01, 0.05, 0.1],
+                "light_gbm__num_leaves": randint(30, 100),
+                "light_gbm__max_depth": randint(3, 10),
+            },
+        ]
 
     # Rolls the training window to accumulate years
     fold = 1
@@ -113,23 +115,27 @@ def cross_validate(
         X_train_val, y_train_val = X.iloc[train_val_idx], y.iloc[train_val_idx]
         X_test = X.iloc[test_idx]
 
-        # Separate the train_val into training and validation to do hyperparameter search
-        train_val_split = RollingTimeSeriesSplit(
-            seasons=X_train_val["season"], fixed_window_size=train_window_size
-        )
-        search = RandomizedSearchCV(
-            estimator=pipeline,
-            param_distributions=param_distributions,
-            n_iter=1,
-            cv=train_val_split,
-            scoring="neg_mean_squared_error",
-            n_jobs=-1,
-        )
-        start = time.time()
-        search.fit(X_train_val, y_train_val)
-        cv_pipeline = search.best_estimator_
-        end = time.time()
-        print(f"Hyperparameter tuning took {end-start:.2f} seconds")
+        if hyperparam_tuning:
+            # TODO: In future, consider FLAML for optimized hyperparameter tuning. Can be used in a Pipeline.
+            # Separate the train_val into training and validation to do hyperparameter search
+            train_val_split = RollingTimeSeriesSplit(
+                seasons=X_train_val["season"], fixed_window_size=train_window_size
+            )
+            search = RandomizedSearchCV(
+                estimator=pipeline,
+                param_distributions=param_distributions,
+                n_iter=1,
+                cv=train_val_split,
+                scoring="neg_mean_squared_error",
+                n_jobs=-1,
+            )
+            start = time.time()
+            search.fit(X_train_val, y_train_val)
+            cv_pipeline = search.best_estimator_
+            end = time.time()
+            print(f"Hyperparameter tuning took {end-start:.2f} seconds")
+        else:
+            cv_pipeline = pipeline
 
         # NOTE: Can consider storing validation error, but not necessary
         start = time.time()
