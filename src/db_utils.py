@@ -8,7 +8,7 @@ import psycopg2.extras
 import yaml
 from dotenv import load_dotenv
 
-load_dotenv
+load_dotenv()
 PROJECT_ROOT = os.getenv("PROJECT_ROOT", os.getcwd())
 
 

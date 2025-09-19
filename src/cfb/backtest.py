@@ -1,3 +1,5 @@
+# TODO: Relative imports
+
 import argparse
 import datetime as dt
 import os
@@ -129,19 +131,17 @@ def cross_validate(
                 scoring="neg_mean_squared_error",
                 n_jobs=-1,
             )
-            start = time.time()
+            start_time = time.time()
             search.fit(X_train_val, y_train_val)
             cv_pipeline = search.best_estimator_
-            end = time.time()
-            print(f"Hyperparameter tuning took {end-start:.1f} seconds...")
+            print(f"Hyperparameter tuning took {time.time()-start_time:.1f} seconds...")
         else:
             cv_pipeline = pipeline
 
         # NOTE: Can consider storing validation error, but not necessary
-        start = time.time()
+        start_time = time.time()
         cv_pipeline.fit(X_train_val, y_train_val)
-        end = time.time()
-        print(f"Train data fitting took {end-start:.1f} seconds...")
+        print(f"Train data fitting took {time.time()-start_time:.1f} seconds...")
 
         # If this is the first split, we denote that it's a training prediction before saving df
         if first_split:
@@ -153,10 +153,9 @@ def cross_validate(
             first_split = False
 
         # Get predictions to odds_df, appends feature contributions
-        start = time.time()
+        start_time = time.time()
         preds = cv_pipeline.predict(X_test, pred_contrib=True)
-        end = time.time()
-        print(f"Test predicting took {end-start:.1f} seconds...")
+        print(f"Test predicting took {time.time()-start_time:.1f} seconds...")
         cols = cv_pipeline.named_steps["light_gbm"].feature_name_ + ["bias"]
         contrib_df_list.append(
             pd.DataFrame(preds[:, :], columns=cols, index=X_test.index)

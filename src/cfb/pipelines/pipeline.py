@@ -272,7 +272,13 @@ def get_features_and_model_pipeline() -> Pipeline:
         verbose_feature_names_out=False,
     )
 
-    lgbm_params = {"verbose": -1, "reg_lambda": 1, "reg_alpha": 1}
+    lgbm_params = {
+        "verbose": -1,
+        "reg_lambda": 5,
+        "reg_alpha": 2,
+        "learning_rate": 0.05,
+        "num_iterations": 20,
+    }
     pipeline = Pipeline(
         steps=[
             ("features", features),
