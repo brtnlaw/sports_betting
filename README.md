@@ -1,6 +1,6 @@
 # Sports Betting Model
 
-Looks for relative value within betting odds within CFB.
+Looks for relative value within betting odds within CFB. Simply a fun passion project whose primary goal is not to promote gambling or make loads of money, but rather to test my ability to predict random events and the sharpest lines are formed with people's wallets.
 
 ## (Desired) Features
 
@@ -11,12 +11,15 @@ Looks for relative value within betting odds within CFB.
 - Model prediction break down and predicted edge from theo
 - Various derivative predictions
     - Individual player stats, quarter stats
+ 
+## Project Structure
+The ethos behind this model is to utilize a more robust machine learning architecture that is enriched with fruitful and creative feature development. Namely, we have various pre-processing pipelines that transform various sources of public data, feed this into LightGBM with more intelligent hyperparameter sweeping and feature selection, and lastly output a prediction for the respective market.
 
 ## Setup
 
 - Download PostgreSQL
     - Optional: Download DBeaver
-- Run the sql files
+- Run the sql files via each .py in src/cfb/data
 - Download the requirements.txt 
     - May need to add pg_config to path, PATH="/Library/PostgreSQL/17/bin/:$PATH"
 ```
@@ -48,4 +51,7 @@ source venv/bin/activate
 CFBD_API_KEY = ******
 PROJECT_ROOT = ******
 ```
+- backtest.py contains example usages depending on hyperparameter choice (betting function, etc.)
+- saved models can be played with using tools in evaluation.py
+
 
